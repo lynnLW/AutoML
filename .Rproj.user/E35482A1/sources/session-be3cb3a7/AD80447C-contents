@@ -1,0 +1,83 @@
+#' Screening out the core variables for the prognosis with the machine learning algorithms
+#' 
+#' A function can be used for screening out the core features from the given candidate genes with eight machine learning algorithms. 
+#' 
+#' @param InputMatrix A gene expression dataframe after log2(x+1) scaled. The first three of the column names are, in order, ID,OS.time, OS. Columns starting with the fourth are gene symbols. OS.time is a numeric variable in days. OS is a numeric variable containing 0, 1. 0: Alive, 1: Dead. 
+#' @param candidate_genes The input genes, that you want to screen out from, for identifying the core features.
+#' @param mode  We provide three modes including 'all', 'single', and 'all_without_SVM'. The 'all' mode means using all eight methods for selecting. The 'single' mode means using only one method for running. Since SVM takes so much time, we're singling him out. The 'all_without_SVM' mode means the other seven methods used for selecting. 
+#' @param seed  The seed. You can set it as any number. For example, 5201314.
+#' @param single_ml The one method from the eight methods including "RSF", "Enet", "Boruta", "Xgboost", "SVM-REF", "Lasso", "CoxBoost', 'StepCox'.
+#' @param nodesize The node size parameter for the RSF method. The default is 5. You can try another positive integer. For example, 10,15,20, etc. 
+#'
+#' @return A data frame including the methods and the core genes screened by the corresponding algorithm.
+#' @export
+#'
+#' @examples
+ML.Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.time, third OS, (0/1), feature list...
+                                       candidate_genes,
+                                       mode = NULL, # all, single,all_without_SVM
+                                       seed = NULL,
+                                       single_ml = NULL, # c("RSF", "Enet", "Boruta","Xgboost","SVM-REF","Lasso","CoxBoost','StepCox')
+                                       nodesize = 5,
+                                       preprocess=T) {
+  ### Screen out the core features via the multiple machine leaning algorithms
+  ### loading the packages ####
+  
+  if (T) {
+    Biocductor_packages <- c(
+      "tidyverse",
+      "scales",
+      "Hmisc",
+      "survival",
+      "randomForestSRC",
+      "glmnet",
+      "plsRcox",
+      "CoxBoost",
+      "survivalsvm",
+      "dplyr",
+      "tibble",
+      "BART",
+      "miscTools",
+      "compareC",
+      "tidyr",
+      "mixOmics",
+      "data.table",
+      "pbapply",
+      "e1071",
+      "Boruta",
+      "xgboost",
+      "Ckmeans.1d.dp",
+      "Matrix"
+    )
+    
+    lapply(Biocductor_packages, function(x) {
+      library(x,
+              character.only = T
+              # ,  lib.loc = "/export/bioinfo-team/home/xiongzj/R/x86_64-pc-linux-gnu-library/4.1"
+      )
+    })
+  }
+  
+}
+  print("-----format the inputmatrix and genelist-----")
+  colnames(InputMatrix) <- gsub("-", ".", colnames(InputMatrix))
+  colnames(InputMatrix) <- gsub("_", ".", colnames(InputMatrix))
+  names(InputMatrix)[2]<-"OS.time"
+  names(InputMatrix)[3]<-"OS"
+  InputMatrix_pre <- InputMatrix
+
+  if(preprocess){
+    #unicox and km selection
+    source("R/sigUnicox.R")
+    source("R/sigKMcox.R")
+    genelist.1 <- SigUnicox(gene_list = candidate_genes, inputSet = InputMatrix_pre, unicox_pcutoff = 0.05)
+    
+    genelist.2 <- SigKMcox(gene_list = genelist.1, inputSet = InputMatrix_pre, KM_pcutoff = 0.05)
+    
+    candidate_genes <- genelist.2
+    write.table(candidate_genes,paste("3.KM_unicox_select_genes.csv",sep = ""),row.names = F, quote = F,sep=",")
+    print("----- finish the preprocess of the unicox and km analysis-----")
+  }
+  
+
+
