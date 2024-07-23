@@ -6,9 +6,10 @@ ML.boruta<-function(est_dd,
 
     message("--- 3.Boruta  ---")
     boruta <- Boruta(
-      x = as.matrix(est_dd[,-1]), y = as.factor(est_dd[, c(2)]), pValue = 0.01, mcAdj = T,
-      maxRuns = 11
+      x = as.matrix(est_dd[,-c(1,2)]), y = as.factor(est_dd[, c(2)]), pValue = 0.01, mcAdj = T,
+      maxRuns = 1000
     )
+    boruta
     boruta.imp <- function(x) {
       imp <- reshape2::melt(x$ImpHistory, na.rm = T)[, -1]
       colnames(imp) <- c("Variable", "Importance")

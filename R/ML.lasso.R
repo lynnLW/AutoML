@@ -1,4 +1,4 @@
-ML.lasso<-function(est_dd,pre_var,seed=123456){
+ML.lasso<-function(est_dd,pre_var,iter.times,seed=123456){
   ### 1. Repeated Lasso  #############
   message("--- 1.Repeated lasso ---")
   x1 <- as.matrix(est_dd[, pre_var])

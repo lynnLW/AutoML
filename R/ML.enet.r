@@ -1,9 +1,9 @@
-ML.enet<-function(est_dd,pre_var,seed=123456){
+ML.enet<-function(est_dd,pre_var,iter.times,seed=123456){
   ##### setting the pamameters ######
 
   seed <- seed
-  final.iter.times <- 10
-  test.iter.times<-10
+  final.iter.times <- iter.times
+  test.iter.times<-50
   ####
   message("--- 2.Enet  ---")
   library(glmnet)
