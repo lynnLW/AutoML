@@ -53,7 +53,7 @@ ML.enet<-function(est_dd,pre_var,iter.times,seed=123456){
       mean_cv_error = mean_cv_errors_list[[i]]
    )}))
   ###
-  jpeg(p,filename="2.enet_mean_cross_error_different_alpha.jpg",width = 12,height = 10,dpi = 600,units = "cm")
+  jpeg(filename="2.enet_mean_cross_error_different_alpha.jpg",res=600,width = 12,height = 10,units = "cm")
   # 绘图
   p <- ggplot(mean_cv_errors_df, aes(x = alpha, y = mean_cv_error,color = factor(alpha))) +
      geom_boxplot() +
