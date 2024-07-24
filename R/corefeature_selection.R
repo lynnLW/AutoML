@@ -13,7 +13,7 @@
 #' @export
 #'
 #' @examples
-ML.Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.time, third OS, (0/1), feature list...
+Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.time, third OS, (0/1), feature list...
                                        genelist,
                                        mode = NULL, # all, single,all_without_SVM
                                        seed = NULL,

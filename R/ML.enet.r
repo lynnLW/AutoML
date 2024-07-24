@@ -52,7 +52,8 @@ ML.enet<-function(est_dd,pre_var,iter.times,seed=123456){
       alpha = factor(rep(alpha_values[i], length(mean_cv_errors_list[[i]]))),
       mean_cv_error = mean_cv_errors_list[[i]]
    )}))
-
+  ###
+  jpeg(p,filename="2.enet_mean_cross_error_different_alpha.jpg",width = 12,height = 10,dpi = 600,units = "cm")
   # 绘图
   p <- ggplot(mean_cv_errors_df, aes(x = alpha, y = mean_cv_error,color = factor(alpha))) +
      geom_boxplot() +
@@ -70,8 +71,8 @@ ML.enet<-function(est_dd,pre_var,iter.times,seed=123456){
      ) +
      scale_color_brewer(palette = "Set1")
     # 打印图表
-    print(p)
-    ggsave(p,filename="5.enet_mean_cross_error_different_alpha.jpg",width = 10,height = 8,dpi = 300,units = "cm",scale = 1.2)
+   print(p)
+   dev.off()
 
    ##select optimal alpha
    # 找到最优的alpha值

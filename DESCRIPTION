@@ -2,7 +2,7 @@ Package: ML
 Type: Package
 Title: A tools of R to deal with my work
 Version: 0.1.0
-Author: Lin Wang
+Author: lynnLW
 Maintainer: The package maintainer <yourself@somewhere.net>
 Description: my tools of R to deal with my work
 License: GPL
