@@ -200,7 +200,7 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
           method = c(rep("SVM-REF", length(fea))),
           selected.fea = fea
         )
-        write.table(result,file="7.svm_select_features.csv",sep=",",row.names = F)
+        write.table(result,file="4.svm_select_features.csv",sep=",",row.names = F)
         selected.feature <- rbind(selected.feature, result)
 
         ##### 5.xgboost ##########
