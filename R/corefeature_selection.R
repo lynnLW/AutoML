@@ -8,11 +8,7 @@
 #' @param seed  The seed. You can set it as any number. For example, 5201314.
 #' @param single_ml The one method from the eight methods including "RSF", "Enet", "Boruta", "Xgboost", "SVM-REF", "Lasso", "CoxBoost', 'StepCox'.
 #' @param nodesize The node size parameter for the RSF method. The default is 5. You can try another positive integer. For example, 10,15,20, etc.
-#'
-#' @return A data frame including the methods and the core genes screened by the corresponding algorithm.
-#' @export
-#'
-#' @examples
+
 Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.time, third OS, (0/1), feature list...
                                        genelist,
                                        mode = NULL, # all, single,all_without_SVM
@@ -105,8 +101,8 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
 
   if(unicox_km){
     #unicox and km selection
-    #source("R/sigUnicox.R")
-    #source("R/sigKMcox.R")
+    source("R/sigUnicox.R")
+    source("R/sigKMcox.R")
     genelist.1 <- SigUnicox(gene_list = genelist, inputSet = InputMatrix, unicox_pcutoff = 0.05)
     genelist.2 <- SigKMcox(gene_list = genelist.1, inputSet = InputMatrix, KM_pcutoff = 0.05)
 
@@ -114,6 +110,7 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
     write.table(candidate_genes,paste("3.KM_unicox_select_genes.csv",sep = ""),row.names = F, quote = F,sep=",")
     print("----- finish the preprocess of the unicox and km analysis-----")
     ##### setting the pamameters ######
+  }
 
     seed <- seed
     iter.times <- 1000
@@ -154,28 +151,28 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
       pre_var <- common_feature[-c(1:3)]
       selected.feature <- data.frame()
 
-        if (mode == "all") {
+      if (mode == "all") {
 
         ### 1. Repeated Lasso  #############
         message("--- 1.Repeated lasso ---")
-        #source("R/ML.lasso.R")
+        source("R/ML.lasso.R")
         selected.feature<-ML.lasso(est_dd,pre_var,iter.times,seed=123456)
 
         ##### 2.Enet ###########
         message("--- 2.Enet  ---")
-        #source("R/ML.enet.r")
+        source("R/ML.enet.r")
         selected.feature<-ML.enet(est_dd,pre_var,iter.times,seed=123456)
 
         ##### 3.Boruta ###########
         message("--- 3.Boruta  ---")
-        #source("R/ML.boruta.r")
+        source("R/ML.boruta.r")
         selected.feature<-ML.boruta(est_dd,seed=123456)
 
         ##### 4.SVM-REF ##########
         message("--- 4.SVM-REF  ---")
         print("This step will probably take several hours")
         input <- est_dd[, -1]
-        #source("R/ML.svm.R")
+        source("R/ML.svm.R")
         # 10CV (k-fold crossValidation）
         svmRFE(input, k = 10, halve.above = 100) # 分割数据，分配随机数
         nfold <- 10
@@ -190,7 +187,6 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
         } else {
           n.svm <- n.features
         }
-
         featsweep <- base::lapply(1:n.svm, FeatSweep.wrap, results, input)
         no.info <- min(prop.table(table(input[, 1])))
         errors <- sapply(featsweep, function(x) ifelse(is.null(x), NA, x$error))
@@ -205,7 +201,7 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
 
         ##### 5.xgboost ##########
         message("--- 5.xgboost  ---")
-        #source("R/ML.xgboost.R")
+        source("R/ML.xgboost.R")
         selected.feature<-ML.xgboost(est_dd,seed=123456)
 
         ##### 6.rsf ##########
@@ -224,10 +220,8 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
         #source("R/ML.stepcox.R")
         selected.feature<-ML.stepCox(est_dd,seed=123456)
 
+        return(selected.feature)
       }
     }
-    }
-
-  return(selected.feature)
 
 }

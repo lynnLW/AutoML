@@ -26,7 +26,7 @@ top_feature_select <- function(object, # output of ML.Corefeature.Prog.Screen
 
   tmp <- as.data.frame(table(object$selected.fea))
   tmp$Var1 <- gsub("\\.", "-", tmp$Var1)
-  tmp <- tmp[order(tmp$Freq, decreasing = T), ]
+  tmp <- tmp[order(tmp$Freq, decreasing = F), ]
   ##
   tmp$Var1 <- factor(tmp$Var1, levels = tmp$Var1)
   colnames(tmp)[2] <- "Frequence"
