@@ -101,8 +101,8 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
 
   if(unicox_km){
     #unicox and km selection
-    source("R/sigUnicox.R")
-    source("R/sigKMcox.R")
+    #source("R/sigUnicox.R")
+    #source("R/sigKMcox.R")
     genelist.1 <- SigUnicox(gene_list = genelist, inputSet = InputMatrix, unicox_pcutoff = 0.05)
     genelist.2 <- SigKMcox(gene_list = genelist.1, inputSet = InputMatrix, KM_pcutoff = 0.05)
 
@@ -155,24 +155,24 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
 
         ### 1. Repeated Lasso  #############
         message("--- 1.Repeated lasso ---")
-        source("R/ML.lasso.R")
+        #source("R/ML.lasso.R")
         selected.feature<-ML.lasso(est_dd,pre_var,iter.times,seed=123456)
 
         ##### 2.Enet ###########
         message("--- 2.Enet  ---")
-        source("R/ML.enet.r")
+        #source("R/ML.enet.r")
         selected.feature<-ML.enet(est_dd,pre_var,iter.times,seed=123456)
 
         ##### 3.Boruta ###########
         message("--- 3.Boruta  ---")
-        source("R/ML.boruta.r")
+        #source("R/ML.boruta.r")
         selected.feature<-ML.boruta(est_dd,seed=123456)
 
         ##### 4.SVM-REF ##########
         message("--- 4.SVM-REF  ---")
         print("This step will probably take several hours")
         input <- est_dd[, -1]
-        source("R/ML.svm.R")
+        #source("R/ML.svm.R")
         # 10CV (k-fold crossValidation）
         svmRFE(input, k = 10, halve.above = 100) # 分割数据，分配随机数
         nfold <- 10
@@ -201,7 +201,7 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
 
         ##### 5.xgboost ##########
         message("--- 5.xgboost  ---")
-        source("R/ML.xgboost.R")
+        #source("R/ML.xgboost.R")
         selected.feature<-ML.xgboost(est_dd,seed=123456)
 
         ##### 6.rsf ##########
@@ -216,7 +216,6 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
 
         ##### 8.xgboost ##########
         message("--- 8.stepcox  ---")
-
         #source("R/ML.stepcox.R")
         selected.feature<-ML.stepCox(est_dd,seed=123456)
 
