@@ -1,4 +1,4 @@
-ML.rsf<-function(est_dd,seed=123456){
+ML.rsf<-function(est_dd,selected.feature,seed=12345621){
   ##### 6.RSF ###########
   message("--- 6.RSF  ---")
   set.seed(seed)

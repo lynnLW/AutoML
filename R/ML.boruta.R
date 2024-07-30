@@ -1,9 +1,8 @@
-ML.boruta<-function(est_dd,
-                    seed=123456
+ML.boruta<-function(est_dd,selected.feature,
+                    seed=12345621
     ){
     ##### 3.Boruta ###########
     set.seed(seed)
-
     message("--- 3.Boruta  ---")
     boruta <- Boruta(
       x = as.matrix(est_dd[,-c(1,2)]), y = as.factor(est_dd[, c(2)]), pValue = 0.01, mcAdj = T,

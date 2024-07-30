@@ -1,4 +1,4 @@
-ML.coxboost<-function(est_dd,seed=123456){
+ML.coxboost<-function(est_dd,selected.feature,seed=12345621){
   ##### 7.CoxBoost ###########
   message("--- 7.CoxBoost  ---")
 

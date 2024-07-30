@@ -1,5 +1,5 @@
-ML.xgboost<-function(est_dd,
-                     seed=123456){
+ML.xgboost<-function(est_dd,selected.feature,
+                     seed=12345621){
           ##### 5.Xgboost ###########
           message("--- 5.Xgboost  ---")
           set.seed(seed)

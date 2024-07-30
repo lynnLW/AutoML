@@ -1,4 +1,4 @@
-ML.enet<-function(est_dd,pre_var,iter.times,seed=123456){
+ML.enet<-function(est_dd,pre_var,iter.times,selected.feature,seed=12345621){
   ##### setting the pamameters ######
 
   seed <- seed

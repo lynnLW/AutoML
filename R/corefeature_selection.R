@@ -109,11 +109,9 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
     candidate_genes <- genelist.2
     write.table(candidate_genes,paste("3.KM_unicox_select_genes.csv",sep = ""),row.names = F, quote = F,sep=",")
     print("----- finish the preprocess of the unicox and km analysis-----")
-    ##### setting the pamameters ######
+
   }
 
-    seed <- seed
-    iter.times <- 1000
     # Checking data feasibility
     message("--- check data feasibility ---")
 
@@ -149,6 +147,10 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
 
       est_dd <- as.data.frame(InputMatrix)[, common_feature[-1]]
       pre_var <- common_feature[-c(1:3)]
+
+      ##### setting the pamameters ######
+      seed <- seed
+      iter.times <- 1000
       selected.feature <- data.frame()
 
       if (mode == "all") {
@@ -156,17 +158,17 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
         ### 1. Repeated Lasso  #############
         message("--- 1.Repeated lasso ---")
         #source("R/ML.lasso.R")
-        selected.feature<-ML.lasso(est_dd,pre_var,iter.times,seed=123456)
+        selected.feature<-ML.lasso(est_dd,pre_var,iter.times,selected.feature,seed=12345621)
 
         ##### 2.Enet ###########
         message("--- 2.Enet  ---")
         #source("R/ML.enet.r")
-        selected.feature<-ML.enet(est_dd,pre_var,iter.times,seed=123456)
+        selected.feature<-ML.enet(est_dd,pre_var,iter.times,selected.feature,seed=12345621)
 
         ##### 3.Boruta ###########
         message("--- 3.Boruta  ---")
         #source("R/ML.boruta.r")
-        selected.feature<-ML.boruta(est_dd,seed=123456)
+        selected.feature<-ML.boruta(est_dd,selected.feature,seed=12345621)
 
         ##### 4.SVM-REF ##########
         message("--- 4.SVM-REF  ---")
@@ -202,22 +204,22 @@ Corefeature.Prog.Screen <- function(InputMatrix, ### first column ID,second OS.t
         ##### 5.xgboost ##########
         message("--- 5.xgboost  ---")
         #source("R/ML.xgboost.R")
-        selected.feature<-ML.xgboost(est_dd,seed=123456)
+        selected.feature<-ML.xgboost(est_dd,selected.feature,seed=12345621)
 
         ##### 6.rsf ##########
         message("--- 6.rsf  ---")
         #source("R/ML.rsf.R")
-        selected.feature<-ML.rsf(est_dd,seed=123456)
+        selected.feature<-ML.rsf(est_dd,selected.feature,seed=12345621)
 
         ##### 7.coxboost ##########
         message("--- 7.coxboost  ---")
         #source("R/ML.coxboost.R")
-        selected.feature<-ML.coxboost(est_dd,seed=123456)
+        selected.feature<-ML.coxboost(est_dd,selected.feature,seed=12345621)
 
         ##### 8.xgboost ##########
         message("--- 8.stepcox  ---")
         #source("R/ML.stepcox.R")
-        selected.feature<-ML.stepCox(est_dd,seed=123456)
+        selected.feature<-ML.stepCox(est_dd,selected.feature,seed=12345621)
 
         return(selected.feature)
       }

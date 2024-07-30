@@ -1,4 +1,4 @@
-ML.stepCox<-function(est_dd,seed=123456){
+ML.stepCox<-function(est_dd,selected.feature,seed=12345621){
   ##### 8.StepCox ###########
   message("--- 8.StepCox ---")
   all_result<-c()

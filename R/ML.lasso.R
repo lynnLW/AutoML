@@ -1,4 +1,4 @@
-ML.lasso<-function(est_dd,pre_var,iter.times,seed=123456){
+ML.lasso<-function(est_dd,pre_var,iter.times,selected.feature,seed=12345621){
   ### 1. Repeated Lasso  #############
   message("--- 1.Repeated lasso ---")
   x1 <- as.matrix(est_dd[, pre_var])
@@ -55,6 +55,6 @@ ML.lasso<-function(est_dd,pre_var,iter.times,seed=123456){
     selected.fea = genes
   )
   write.table(result,file="1.lasso_select_features.csv",sep=",",row.names = F)
-  selected.feature <- rbind(selected.feature, result)
+  selected.feature <- rbind(selected.feature,result)
   return(selected.feature)
 }
