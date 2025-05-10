@@ -2,9 +2,11 @@ Package: AutoML
 Type: Package
 Title: A tools of R to deal with my work
 Version: 0.1.0
-Author: lynnLW
-Maintainer: The package maintainer:https://github.com/lynnLW/AutoML.git
-Description: using ML algorithms to construct prognostic model
+Authors@R: 
+    person("Lin", "Wang",
+           email = "lin.wang.girl@gmail.com",
+           role = c("aut", "cre"))
+Description: This script is used to construct prognostic model bashed on 11 ML algorithms.
 License: GPL
 Encoding: UTF-8
 LazyData: true

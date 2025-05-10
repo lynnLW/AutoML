@@ -512,7 +512,7 @@ feature_selection<- function(InputMatrix,
     genes <- names(genes[genes > freq.cutoff])
 
     result <- data.frame(
-      method = c(rep(paste0("Enet","[α=",alpha,"]"), length(genes))),
+      method = c(rep(paste0("Enet","[alpha=",alpha,"]"), length(genes))),
       selected.fea = genes
     )
     write.table(result,file=paste0(outdir,"/2.Enet_select_features.csv"),sep=",",row.names = F)
