@@ -1,61 +1,184 @@
-top_feature_select <- function(object, # output of ML.Corefeature.Prog.Screen
-                              col = NULL, # color value for segment and point
-                              top = NULL, # top number gene to show
-                              top_select=NULL,
-                              nmethod=NULL
-                              ) {
+#' Select core prognostic features from the candidate genes
+#'
+#' Identify Key Genes Through Feature Frequency Analysis and Visualization
+#'
+#' @param selected.feature Feature selection results (output from feature selection function)
+#' @param featurelist Alternative feature list (can be used instead of selected.feature)
+#' @param outdir Output directory path (default: current directory)
+#' @param sets Methods to display (default: all available methods)
+#' @param top Number of top frequent features to display (default: 20)
+#' @param top_select Logical indicating whether to select features by:
+#'        - TRUE: top N most frequent features
+#'        - FALSE: features meeting nmethod threshold
+#' @param nmethod min frequency selected by 11 ML algorithms (Default 5)
+#' @param width plot width (cm)
+#' @param height plot height (cm)
+#'
+#' @return The final selected genes and saving plots
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' data(5_selected_feature)
+#' top_feature_select(selected.feature = selected.feature,
+#'                   nmethod=7,
+#'                   outdir = '1.feature_select/')
+#' }
+
+top_feature_select <- function(
+    selected.feature,
+    featurelist = NULL,
+    sets = NULL,
+    top = 20,
+    top_select = FALSE,
+    nmethod = 5,
+    width = 7.5,
+    height = 9,
+    outdir = '1.feature_select/') {
+
+  # parameters ----------------------------------------------------------------
+  # loading package
   library(ggplot2)
+  library(UpSetR)
+  library(RColorBrewer)
+  library(dplyr)
 
-  if (is.null(col) == T) {
-    col <- c("#B09C85", "#E18727")
-  } else {
-    col <- col
+  if (is.null(selected.feature) && is.null(featurelist)) {
+    stop("Must input selected.feature or featurelist")
   }
 
-  if (is.null(nmethod) == T) {
-    nmethod <- 5
-  } else {
-    nmethod <- nmethod
+  if (!dir.exists(outdir)) {
+    dir.create(outdir, recursive = TRUE)
+    message("Creating the output directory: ", outdir)
   }
 
-  if (is.null(top) == T) {
-    top <- 20
+  # parameters --------------------------------------------------------------
+  sets <- if (is.null(sets)) {
+    if (!is.null(selected.feature)) unique(selected.feature$method) else names(featurelist)
   } else {
-    top <- top
+    intersect(sets, if (!is.null(selected.feature)) unique(selected.feature$method) else names(featurelist))
   }
 
-  tmp <- as.data.frame(table(object$selected.fea))
-  tmp$Var1 <- gsub("\\.", "-", tmp$Var1)
-  tmp <- tmp[order(tmp$Freq, decreasing = F), ]
-  ##
-  tmp$Var1 <- factor(tmp$Var1, levels = tmp$Var1)
-  colnames(tmp)[2] <- "Frequence"
-  jpeg(filename="3.top_feature_selection.jpg",res=600,width = 12,height = 10,units = "cm")
-  p1 <- ggplot(tmp[(nrow(tmp) - top + 1):nrow(tmp), ], aes(x = Var1, y = Frequence)) +
-    geom_segment(aes(x = Var1, xend = Var1, y = 0, yend = Frequence), color = col[1]) +
-    geom_point(aes(size = Frequence), color = col[2], alpha = 0.5) +
-    DOSE::theme_dose(10) +
-    # scale_color_manual(values=dataset_col[t],name="Cohort")+
-    theme(
-      panel.grid = element_blank(),
-      panel.border = element_rect(colour = "black", fill = NA, size = 0.3),
-      # legend.position = "",
-      plot.title = element_text(hjust = 0.5),
-      panel.background = element_rect(fill = "white")
-    ) +
-    # scale_y_continuous(position = "right")+
-    labs(y = "Frequence of screening", x = "", title = paste("Top", top, "selected genes")) +
-    coord_flip()
-  print(p1)
-  dev.off()
-  ##select feature
-  if(top_select==T){
-    final.feature<-as.character(tmp[1:top,]$Var1)
-    print(paste0("Finally, ",length(final.feature)," features were selected for model training"))
+  # preprocessing--------------------------------------------------------------
+  core_feature_list <- if (!is.null(selected.feature)) {
+    lapply(sets, function(m) {
+      selected.feature$selected.fea[selected.feature$method == m]
+    }) %>% stats::setNames(sets)
   } else {
-    final.feature<-as.character(tmp[tmp$Frequence>6,]$Var1)
-    print(paste0("Finally, ",length(final.feature)," features were selected for model training"))
+    featurelist[sets]
   }
+
+  # Frequency ------------------------------------------------------------
+  feature_freq <- if (!is.null(selected.feature)) {
+    dplyr::count(selected.feature, selected.fea, name = "Frequence") %>%
+      dplyr::arrange(dplyr::desc(Frequence)) %>%
+      dplyr::mutate(selected.fea = gsub("\\.", "-", selected.fea))
+  } else {
+    purrr::map_df(featurelist[sets], ~ tibble::tibble(gene = .x), .id = "method") %>%
+      dplyr::count(gene, name = "Frequence") %>%
+      dplyr::arrange(dplyr::desc(Frequence)) %>%
+      dplyr::mutate(gene = gsub("\\.", "-", gene))
+  }
+
+  # saving results ----------------------------------------------------------------
+  utils::write.csv(feature_freq, file.path(outdir, "feature_frequency.csv"), row.names = FALSE)
+
+  # view plot --------------------------------------------------------------
+  # Helper 1: UpSet Plot --------------------------------------------------------
+  plot_upset <- function(feature_list, outdir) {
+
+    grDevices::jpeg(
+      filename = file.path(outdir, "feature_upset_plot.jpg"),
+      res = 600,
+      width = 12,
+      height = 12,
+      units = "cm"
+    )
+    on.exit(grDevices::dev.off())
+
+    print(
+      UpSetR::upset(
+        UpSetR::fromList(feature_list),
+        sets = names(feature_list),
+        order.by = "freq",
+        mb.ratio = c(0.6, 0.4),
+        mainbar.y.label = "Intersection Size",
+        sets.x.label = "Set Size",
+        text.scale = 0.8,
+        sets.bar.color = "#E41A1C",
+        main.bar.color = "#377EB8"
+      )
+    )
+  }
+
+  # Helper 2: Frequency Plot ----------------------------------------------------
+  plot_frequency <- function(freq_data, top, outdir, width,height){
+    top <- min(top, nrow(freq_data))
+    plot_data <- utils::head(freq_data, top)
+
+    p <- ggplot(
+      plot_data,
+      aes(x = stats::reorder(.data[[names(plot_data)[1]]], Frequence),
+          y = Frequence)) +
+      geom_segment(
+        aes(xend = .data[[names(plot_data)[1]]], yend = 0),
+        color = "#377EB8"
+      ) +
+      geom_point(
+        aes(size = Frequence),
+        color = "#4DAF4A",
+        alpha = 0.8
+      ) +
+      labs(
+        title = paste("Top", top, "Frequent Features"),
+        x = "",
+        y = "Frequency"
+      ) +
+      theme(
+        panel.grid = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA, linewidth= 0.3),
+        # legend.position = "",
+        axis.text.x = element_text(size=8,colour = "black"),
+        axis.text.y = element_text(size=8,colour = "black"),
+        plot.title = element_text(hjust = 0.5,size=10),
+        legend.title = element_text(size=8,colour = "black"),
+        panel.background = element_rect(fill = "white")) +
+      coord_flip()
+
+    print(p)
+
+    # saving plots
+    ggplot2::ggsave(
+      filename = file.path(outdir, "top_feature_selection.jpg"),
+      plot = p,
+      width = width ,
+      height = height ,
+      dpi = 600,
+      units = "cm"
+    )
+  }
+
+  ## UpSet Plot ---------------------------
+  plot_upset(core_feature_list,
+             outdir = outdir)
+
+  ## Frequency Lollipop Plot --------------
+  plot_frequency(feature_freq,
+                 top = top,
+                 outdir = outdir,
+                 width=width,
+                 height=height)
+
+  # feature selection ----------------------------------------------------------------
+  final.feature <- if (top_select) {
+    head(feature_freq, top)[[1]]
+  } else {
+    feature_freq[feature_freq$Frequence >= nmethod, ][[1]]
+  }
+
+  save(final.feature, file = file.path(outdir, "final_selected_feature.Rdata"))
+  message("The final selected genes: ", length(final.feature))
+
   return(final.feature)
-  save(final.feature,file="3.final_feature.Rdata")
 }
+

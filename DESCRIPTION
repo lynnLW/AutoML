@@ -1,11 +1,44 @@
-Package: ML
+Package: AutoML
 Type: Package
 Title: A tools of R to deal with my work
 Version: 0.1.0
 Author: lynnLW
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: my tools of R to deal with my work
+Maintainer: The package maintainer:https://github.com/lynnLW/AutoML.git
+Description: using ML algorithms to construct prognostic model
 License: GPL
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.3
+Imports:
+    ggplot2 (>= 3.4.0),
+    survminer (>= 0.4.9),
+    pROC (>= 1.18.0),
+    survival,
+    randomForestSRC,
+    glmnet,
+    plsRcox,
+    superpc,
+    gbm,
+    Hmisc,
+    CoxBoost,
+    xgboost,
+    survcomp,
+    survivalROC,
+    mboost,
+    caret,
+    broom,
+    gridExtra,
+    survivalmodels
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    RColorBrewer,
+    dplyr,
+    purrr,
+    tibble,
+    DOSE,
+    Matrix,
+    future.apply,
+    parallel,
+    keras,
+    tensorflow
