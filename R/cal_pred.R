@@ -39,8 +39,7 @@ cal_pred<-function(newdata,model,model_name){
   if (!requireNamespace(c("survcomp","survival"), quietly = TRUE)) {
     stop("Package survcomp required: install.packages('survcomp')")
   }
-  library(survival)
-  library(survcomp)
+
   pred_coxb<-c()
   pred_df<-data.frame()
   ##
@@ -82,22 +81,20 @@ cal_pred<-function(newdata,model,model_name){
                          lambda = 1)
     pred_coxb<-as.numeric(pred_coxb)
   } else if (model_name %in% c("DeepHit")){
-    library(survivalmodels)
     train_fold<-data.frame(model$y,model$x)
     params=model$best_param[[1]]
     set_seed(123)
-    re_model <- deephit(formula = Surv(time, status) ~ ., data = train_fold,
+    re_model <- survivalmodels::deephit(formula = Surv(time, status) ~ ., data = train_fold,
                         frac = 0.2, activation = "relu",
                         num_nodes = c(params$nd1, params$nd2, params$nd3, params$nd4),
                         early_stopping = TRUE, batch_size = params$batch,
                         epochs = params$epochs, learning_rate = params$lr)
     pred_coxb=as.numeric(predict(re_model,newdata,type = "risk"))
   } else if (model_name %in% c("DeepSurv")){
-    library(survivalmodels)
     train_fold<-data.frame(model$y,model$x)
     params=model$best_param[[1]]
     set_seed(123)
-    re_model <- deepsurv(formula = Surv(time, status) ~ ., data = train_fold,
+    re_model <- survivalmodels::deepsurv(formula = Surv(time, status) ~ ., data = train_fold,
                          frac = 0.2, activation = "relu",
                          num_nodes = c(params$nd1, params$nd2, params$nd3, params$nd4),
                          early_stopping = TRUE, batch_size = params$batch,

@@ -24,12 +24,6 @@ surv_plot <- function(vali_auc_list,
                       outdir=NULL,
                       color = NULL # color value for cohort
 ){
-  library(ggplot2)
-  library(aplot)
-  library(ggpubr)
-  library(survminer)
-  library(survival)
-  library(timeROC)
 
   if (is.null(color) == T) {
     color <- c("#0084A7", "#F5FACD", "#E05D00", "#79AF97", "#8491B4") ## default color value
@@ -52,10 +46,10 @@ surv_plot <- function(vali_auc_list,
     }
     ###output
 
-    fit<-survfit(Surv(time,status)~group, data=index_df)
+    fit<-survival::survfit(Surv(time,status)~group, data=index_df)
     ###time dependent roc curve
 
-    p<-ggsurvplot(fit,data=index_df,
+    p<-survminer::ggsurvplot(fit,data=index_df,
                   title = paste0(cohort_name),
                   font.title = c(10,"black"),
                   break.y.by=0.2,
@@ -86,12 +80,12 @@ surv_plot <- function(vali_auc_list,
                             panel.border = element_rect(color = "black", size = 0.8),
                             plot.title = element_text(hjust = 0, vjust = 1)))
     print(p)
-    ggexport(p,filename=paste0(subdir,"/",cohort_name,"_surv_plot.jpg"),width = 2000,height = 1400,res = 600)
+    ggpubr::ggexport(p,filename=paste0(subdir,"/",cohort_name,"_surv_plot.jpg"),width = 2000,height = 1400,res = 600)
   }
 
   optimal_cutoff <- function(data, time, status, pred) {
 
-    cutpoint <- surv_cutpoint(
+    cutpoint <- survminer::surv_cutpoint(
       data,
       time = time,
       event = status,

@@ -22,12 +22,6 @@ roc_plot <- function(vali_auc_list,
                      outdir=NULL,
                      colors = NULL # color value for cohort
 ){
-  library(ggplot2)
-  library(aplot)
-  library(ggpubr)
-  library(survminer)
-  library(pROC)
-  library(ggplot2)
 
   if (is.null(colors) == T) {
     colors <- c(RColorBrewer::brewer.pal(9, "Set1"),
@@ -83,18 +77,18 @@ roc_plot <- function(vali_auc_list,
     }
 
     feature_order <- auc_df %>%
-      distinct(feature, auc) %>%
-      arrange(desc(auc)) %>%
-      mutate(feature_with_auc = sprintf("%s (AUC=%.2f)", feature, auc)) %>%
-      left_join(dataset_col_df, by = c("feature" = "Feature"))
+      dplyr::distinct(feature, auc) %>%
+      dplyr::arrange(desc(auc)) %>%
+      dplyr::mutate(feature_with_auc = sprintf("%s (AUC=%.2f)", feature, auc)) %>%
+      dplyr::left_join(dataset_col_df, by = c("feature" = "Feature"))
 
 
     roc_data <- roc_data %>%
-      left_join(feature_order, by = c("feature")) %>%
-      mutate(feature = factor(feature, levels = feature_order$feature))
+      dplyr::left_join(feature_order, by = c("feature")) %>%
+      dplyr::mutate(feature = factor(feature, levels = feature_order$feature))
 
 
-    p <- ggplot(roc_data, aes(x = fpr, y = tpr,
+    p <-ggplot2::ggplot(roc_data, aes(x = fpr, y = tpr,
                               color = feature)) +
       geom_line(size = 1) +
       geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey") +
@@ -135,7 +129,7 @@ roc_plot <- function(vali_auc_list,
       )
 
     print(p)
-    ggsave(p,filename=paste0(subdir,"/",auc_time, "_feature_ROC.jpg"), width = 9, height = 9, dpi = 600,units = "cm")
+    ggplot2::ggsave(p,filename=paste0(subdir,"/",auc_time, "_feature_ROC.jpg"), width = 9, height = 9, dpi = 600,units = "cm")
   }
 
   ###

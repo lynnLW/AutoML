@@ -18,11 +18,13 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' data(5_selected_feature)
-#' top_feature_select(selected.feature = selected.feature,
-#'                   nmethod=7,
-#'                   outdir = '1.feature_select/')
+#' \donttest{
+#' data("selected_feature")
+#' top_feature_select(
+#'   selected.feature = selected_feature,
+#'   nmethod = 7,
+#'   outdir = tempdir()
+#' )
 #' }
 
 top_feature_select <- function(
@@ -37,12 +39,6 @@ top_feature_select <- function(
     outdir = '1.feature_select/') {
 
   # parameters ----------------------------------------------------------------
-  # loading package
-  library(ggplot2)
-  library(UpSetR)
-  library(RColorBrewer)
-  library(dplyr)
-
   if (is.null(selected.feature) && is.null(featurelist)) {
     stop("Must input selected.feature or featurelist")
   }
@@ -112,38 +108,41 @@ top_feature_select <- function(
   }
 
   # Helper 2: Frequency Plot ----------------------------------------------------
-  plot_frequency <- function(freq_data, top, outdir, width,height){
+  plot_frequency <- function(freq_data, top, outdir, width, height) {
     top <- min(top, nrow(freq_data))
     plot_data <- utils::head(freq_data, top)
 
-    p <- ggplot(
+    p <- ggplot2::ggplot(
       plot_data,
-      aes(x = stats::reorder(.data[[names(plot_data)[1]]], Frequence),
-          y = Frequence)) +
-      geom_segment(
-        aes(xend = .data[[names(plot_data)[1]]], yend = 0),
+      ggplot2::aes(
+        x = stats::reorder(.data[[names(plot_data)[1]]], Frequence),
+        y = Frequence
+      )
+    ) +
+      ggplot2::geom_segment(
+        ggplot2::aes(xend = .data[[names(plot_data)[1]]], yend = 0),
         color = "#377EB8"
       ) +
-      geom_point(
-        aes(size = Frequence),
+      ggplot2::geom_point(
+        ggplot2::aes(size = Frequence),
         color = "#4DAF4A",
         alpha = 0.8
       ) +
-      labs(
+      ggplot2::labs(
         title = paste("Top", top, "Frequent Features"),
         x = "",
         y = "Frequency"
       ) +
-      theme(
-        panel.grid = element_blank(),
-        panel.border = element_rect(colour = "black", fill = NA, linewidth= 0.3),
-        # legend.position = "",
-        axis.text.x = element_text(size=8,colour = "black"),
-        axis.text.y = element_text(size=8,colour = "black"),
-        plot.title = element_text(hjust = 0.5,size=10),
-        legend.title = element_text(size=8,colour = "black"),
-        panel.background = element_rect(fill = "white")) +
-      coord_flip()
+      ggplot2::theme(
+        panel.grid = ggplot2::element_blank(),
+        panel.border = ggplot2::element_rect(colour = "black", fill = NA, linewidth = 0.3),
+        axis.text.x = ggplot2::element_text(size = 8, colour = "black"),
+        axis.text.y = ggplot2::element_text(size = 8, colour = "black"),
+        plot.title = ggplot2::element_text(hjust = 0.5, size = 10),
+        legend.title = ggplot2::element_text(size = 8, colour = "black"),
+        panel.background = ggplot2::element_rect(fill = "white")
+      ) +
+      ggplot2::coord_flip()
 
     print(p)
 
@@ -151,27 +150,22 @@ top_feature_select <- function(
     ggplot2::ggsave(
       filename = file.path(outdir, "top_feature_selection.jpg"),
       plot = p,
-      width = width ,
-      height = height ,
+      width = width,
+      height = height,
       dpi = 600,
       units = "cm"
     )
   }
 
   ## UpSet Plot ---------------------------
-  plot_upset(core_feature_list,
-             outdir = outdir)
+  plot_upset(core_feature_list, outdir = outdir)
 
   ## Frequency Lollipop Plot --------------
-  plot_frequency(feature_freq,
-                 top = top,
-                 outdir = outdir,
-                 width=width,
-                 height=height)
+  plot_frequency(feature_freq, top = top, outdir = outdir, width = width, height = height)
 
   # feature selection ----------------------------------------------------------------
   final.feature <- if (top_select) {
-    head(feature_freq, top)[[1]]
+    utils::head(feature_freq, top)[[1]]
   } else {
     feature_freq[feature_freq$Frequence >= nmethod, ][[1]]
   }
@@ -181,4 +175,3 @@ top_feature_select <- function(
 
   return(final.feature)
 }
-

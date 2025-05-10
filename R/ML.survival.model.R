@@ -1,35 +1,36 @@
-#' Training survival model by using 13 Machine Learning algorithms
+#' Training Survival Models Using 13 Machine Learning Algorithms
 #'
-#' @param train_data # used for training (colnames:ID,time,status,feature)
-#' @param candidate_genes  features that used to build the model
-#' @param filter_OS_time if keep survival time >30 days
-#' @param meta_time follow up time used by days or months or years c("m","y","d") default m
-#' @param cor  if remove highly correlated genes
-#' @param cor_threshold correlation 0.85
-#' @param fold folds for cross validation
-#' @param rep repeats
-#' @param p A proportion of train_data used to build the model default 0.7
-#' @param deep if using deep learning model deepsurv or deephit
-#' @param outdir the output directory
-#' @param seed random seed
-#' @param ncore multisession cores
-#' @return model list
+#' @param train_data Data.frame for training (colnames: ID, time, status, features)
+#' @param candidate_genes Features used to build the model
+#' @param filter_OS_time Logical, filter samples with survival time >30 days
+#' @param meta_time Time unit for follow-up ("d", "m", "y"), default "m"
+#' @param cor Logical, remove highly correlated features
+#' @param cor_threshold Correlation threshold (0-1), default 0.85
+#' @param fold Number of cross-validation folds
+#' @param rep Number of repeats for cross-validation
+#' @param p Proportion of data for training (0-1), default 1
+#' @param deep Logical, use deep learning models (deepsurv/deephit)
+#' @param outdir Output directory path
+#' @param seed Random seed
+#' @param ncore Number of CPU cores for parallelization
+#'
+#' @return List containing trained models and evaluation metrics
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' # Example usage
 #' model_list <- ML.survival.model(
-#'   train_data,
-#'   candiate_genes,
-#'   filter_OS_time=F,
-#'   meta_time="m",
-#'   mode="all",
-#'   seed=123,
-#'   fold=5,
-#'   rep=10,
-#'   p=0.7
+#'   train_data = survival_df,
+#'   candidate_genes = c("gene1", "gene2"),
+#'   filter_OS_time = FALSE,
+#'   meta_time = "m",
+#'   cor = TRUE,
+#'   fold = 5,
+#'   rep = 10,
+#'   seed = 123
 #' )
-#'
-
+#' }
 ML.survival.model = function(train_data,
                        candidate_genes,
                        filter_OS_time=F,
@@ -44,33 +45,23 @@ ML.survival.model = function(train_data,
                        seed=123,
                        ncore=4
 ){
-  #loading the packages
-  if(T) {
-    library(Matrix)
-    library(randomForestSRC)
-    library(survival)
-    library(glmnet)
-    library(plsRcox)
-    library(superpc)
-    library(gbm)
-    library(Hmisc)
-    library(CoxBoost)
-    library(survivalsvm)
-    library(xgboost)
-    library(dplyr)
-    library(survcomp)
-    library(caret)
-    library(future.apply)
-    library(parallel)
-    library(survivalROC)
-    library(mboost)
-    library(keras)
-    library(tensorflow)
-    library(survivalmodels)
-    library(plsRcox)
+  # package check---------------------------------------------------------------
+  required_pkgs <- c(
+    "survival", "glmnet", "randomForestSRC", "plsRcox",
+    "gbm", "CoxBoost", "xgboost", "survcomp","mboost","superpc"
+  )
 
-    Sys.setenv(LANGUAGE = "en")
-    options(stringsAsFactors = FALSE)
+  if (deep) {
+    required_pkgs <- c(required_pkgs, "keras", "tensorflow", "survivalmodels")
+  }
+
+  missing_pkgs <- required_pkgs[!sapply(required_pkgs, requireNamespace, quietly = TRUE)]
+  if (length(missing_pkgs) > 0) {
+    stop(
+      "Missing required packages: ", paste(missing_pkgs, collapse = ", "),
+      "\nInstall with: install.packages(c(",
+      paste0("'", missing_pkgs, "'", collapse = ", "), "))"
+    )
   }
 
   ##
@@ -158,7 +149,13 @@ ML.survival.model = function(train_data,
     t1<-Sys.time()
 
     # Set up parallel backend using `future`
-    plan(multicore, workers = ncore)  # Use multisession for parallel execution
+    if (.Platform$OS.type == "unix") {
+      # Unix: Mac/Linux
+      future::plan(future.multicore::multicore, workers = ncore)
+    } else {
+      # Windows
+      future::plan(future::multisession, workers = ncore)
+    }
 
     param_grid <- expand.grid(
       ntree = c(100,500,1000,2000),
@@ -174,7 +171,7 @@ ML.survival.model = function(train_data,
     rfrsf_cox<-function(train_fold,valid_fold,test_fold,params,seed){
       ## modeling
       set.seed(seed)
-      fit <-rfsrc(Surv(time, status) ~ .,
+      fit <-randomForestSRC::rfsrc(Surv(time, status) ~ .,
                   data = train_fold,
                   ntree = params$ntree,
                   nodesize = params$nodesize,
@@ -200,14 +197,14 @@ ML.survival.model = function(train_data,
 
     # the main function-----------------------------------
     # Parallel grid search over hyperparameters
-    results <- future_lapply(1:nrow(param_grid), function(i) {
+    results <- future::future_lapply(1:nrow(param_grid), function(i) {
 
       # Get current parameters
       params <- param_grid[i, ]
       output_list <- list()  # Collect results for each repetition
 
       # Parallelize the repetitions loop
-      output_list <- future_lapply(1:rep, function(j) {
+      output_list <- future::future_lapply(1:rep, function(j) {
         tryCatch({
           folds <- folds_list[[j]]
           model_list <- vector("list", length = fold)
@@ -288,13 +285,13 @@ ML.survival.model = function(train_data,
   lasso_cox<-function(train_fold,valid_fold,test_fold,alpha,fold,model_name,seed){
     ## set different random seeds
     set.seed(seed)
-    cv_fit <- cv.glmnet(as.matrix(train_fold[,3:ncol(train_fold)]),
+    cv_fit <- glmnet::cv.glmnet(as.matrix(train_fold[,3:ncol(train_fold)]),
                         as.matrix(train_fold[,1:2]),
                         family = "cox",
                         alpha = alpha,
                         nfolds = fold)
 
-    final_fit <- glmnet(as.matrix(train_fold[,3:ncol(train_fold)]),
+    final_fit <- glmnet::glmnet(as.matrix(train_fold[,3:ncol(train_fold)]),
                         as.matrix(train_fold[,1:2]),
                         family = "cox",
                         alpha=alpha,
@@ -444,13 +441,13 @@ ML.survival.model = function(train_data,
     coxboost_cox<-function(train_fold,valid_fold,test_fold,fold,seed){
       ##
       set.seed(seed)
-      pen <- optimCoxBoostPenalty(train_fold[,'time'],train_fold[,'status'],
+      pen <- CoxBoost::optimCoxBoostPenalty(train_fold[,'time'],train_fold[,'status'],
                                   as.matrix(train_fold[,-c(1,2)]),
                                   trace=TRUE,start.penalty=500,parallel = T)
 
       #K>>number of folds to be used for cross-validation
       set.seed(seed)
-      cv.res <- cv.CoxBoost(train_fold[,'time'],
+      cv.res <- CoxBoost::cv.CoxBoost(train_fold[,'time'],
                             train_fold[,'status'],
                             as.matrix(train_fold[,-c(1,2)]),
                             maxstepno=500,
@@ -459,7 +456,7 @@ ML.survival.model = function(train_data,
                             penalty=pen$penalty)
 
       set.seed(seed)
-      fit <- CoxBoost(train_fold[,'time'],train_fold[,'status'],
+      fit <- CoxBoost::CoxBoost(train_fold[,'time'],train_fold[,'status'],
                       as.matrix(train_fold[,-c(1,2)]),
                       stepno=cv.res$optimal.step,
                       penalty=pen$penalty)
@@ -510,15 +507,13 @@ ML.survival.model = function(train_data,
     plsr_cox<-function(train_fold,valid_fold,test_fold,fold,seed){
       ##
       set.seed(seed)
-      cv.plsRcox.res=cv.plsRcox(list(x=train_fold[,3:ncol(train_fold)],
+      cv.plsRcox.res=plsRcox::cv.plsRcox(list(x=train_fold[,3:ncol(train_fold)],
                                      time=train_fold$time,
                                      status=train_fold$status),
                                 nfold = fold,
                                 nt=10,
                                 verbose = FALSE)
-      ####
-      set.seed(seed)
-      fit <- plsRcox(train_fold[,3:ncol(train_fold)],
+      fit <- plsRcox::plsRcox(train_fold[,3:ncol(train_fold)],
                      time=train_fold$time,
                      event=train_fold$status,
                      nt=as.numeric(cv.plsRcox.res[5]))
@@ -582,9 +577,9 @@ ML.survival.model = function(train_data,
 
       ####
       set.seed(seed)
-      fit <- superpc.train(data = data,
+      fit <-superpc::superpc.train(data = data,
                            type = 'survival',s0.perc = 0.5) #default
-      cv.fit <- superpc.cv(fit,data,
+      cv.fit <- superpc::superpc.cv(fit,data,
                            n.threshold = 20,
                            n.fold = fold, #Number of cross-validation folds
                            n.components=3,
@@ -639,10 +634,10 @@ ML.survival.model = function(train_data,
     xgboost_cox<-function(train_fold,valid_fold,test_fold,best_param,nround,seed){
       ###
       y<-ifelse(train_fold$status==1,train_fold$time,-train_fold$time)
-      train=xgb.DMatrix(data=data.matrix(train_fold[,-c(1:2)]),label=y)
+      train=xgboost::xgb.DMatrix(data=data.matrix(train_fold[,-c(1:2)]),label=y)
       ###
       set.seed(seed)
-      fit <- xgboost(data=train,
+      fit <- xgboost::xgboost(data=train,
                      params=best_param,
                      nrounds=nround)
 
@@ -661,7 +656,7 @@ ML.survival.model = function(train_data,
 
     ###searching parameter--------------------------------
     set.seed(seed)
-    train.index=createDataPartition(d.train$status,p=0.7,list=F)
+    train.index=caret::createDataPartition(d.train$status,p=0.7,list=F)
     x.train=d.train[train.index,]
     x.test=d.train[-train.index,]
 
@@ -673,9 +668,9 @@ ML.survival.model = function(train_data,
     nthreads=10
     best_loss=10
     y<-ifelse(x.train$status==1,x.train$time,-x.train$time)
-    train=xgb.DMatrix(data=data.matrix(x.train[,-c(1:2)]),label=y)
+    train=xgboost::xgb.DMatrix(data=data.matrix(x.train[,-c(1:2)]),label=y)
     y2<-ifelse(x.test$status==1,x.test$time,-x.test$time)
-    test=xgb.DMatrix(data=data.matrix(x.test[,-c(1:2)]),label=y2)
+    test=xgboost::xgb.DMatrix(data=data.matrix(x.test[,-c(1:2)]),label=y2)
 
     for (a in max_depth.){
       for (b in min_child_weight.){
@@ -696,7 +691,7 @@ ML.survival.model = function(train_data,
         cv.nround = 5000
         cv.nfold = fold
         set.seed(seed)
-        mdcv <- xgb.cv(train,
+        mdcv <- xgboost::xgb.cv(train,
                        params = param,
                        nthread=nthreads,
                        nfold=cv.nfold,
@@ -740,7 +735,7 @@ ML.survival.model = function(train_data,
       cv.nround = 5000
       cv.nfold = fold
       set.seed(seed)
-      mdcv <- xgb.cv(train,
+      mdcv <- xgboost::xgb.cv(train,
                      params = param,
                      nthread=nthreads,
                      nfold=cv.nfold,
@@ -790,7 +785,7 @@ ML.survival.model = function(train_data,
         cv.nround = 5000
         cv.nfold = fold
         set.seed(seed)
-        mdcv <- xgb.cv(train,
+        mdcv <- xgboost::xgb.cv(train,
                        params = param,
                        nthread=nthreads,
                        nfold=cv.nfold,
@@ -841,7 +836,7 @@ ML.survival.model = function(train_data,
         cv.nround = 5000
         cv.nfold = fold
         set.seed(seed)
-        mdcv <- xgb.cv(train,
+        mdcv <- xgboost::xgb.cv(train,
                        params = param,
                        nthread=nthreads,
                        nfold=cv.nfold,
@@ -889,7 +884,7 @@ ML.survival.model = function(train_data,
       cv.nround = 5000
       cv.nfold = fold
       set.seed(seed)
-      mdcv <- xgb.cv(train,
+      mdcv <- xgboost::xgb.cv(train,
                      params = param,
                      nthread=nthreads,
                      nfold=cv.nfold,
@@ -919,13 +914,13 @@ ML.survival.model = function(train_data,
       print("cv.nround")
       print(j)
       set.seed(seed)
-      fit <- xgboost(data = train,verbose = F,
+      fit <- xgboost::xgboost(data = train,verbose = F,
                      params = best_param, nrounds = j)
 
       pred_coxb = predict(fit,data.matrix(x.test[,-c(1:2)]))
       pred_coxb <- as.numeric(pred_coxb)
 
-      cindex_xgb = 1-rcorr.cens(pred_coxb,Surv(x.test$time, x.test$status))[[1]]
+      cindex_xgb = 1-Hmisc::rcorr.cens(pred_coxb,Surv(x.test$time, x.test$status))[[1]]
       print(cindex_xgb)
 
       if (cindex_xgb > best_cindex) {
@@ -975,17 +970,16 @@ ML.survival.model = function(train_data,
     ##the main function-------------------------
     black_cox<-function(train_fold,valid_fold,test_fold,seed){
       set.seed(seed)
-      fit <- blackboost(Surv(time, status) ~ .,
+      fit <-mboost::blackboost(Surv(time, status) ~ .,
                         data = train_fold,
                         family = CoxPH(),
                         control = boost_control(mstop = 500))
 
-      set.seed(seed)
-      cv <- cv(model.weights(fit), type = "kfold")
-      cvm <- cvrisk(fit, folds = cv, papply = lapply)
+      cv <- mboost::cv(model.weights(fit), type = "kfold")
+      cvm <- mboost::cvrisk(fit, folds = cv, papply = lapply)
       n=mstop(cvm)
       set.seed(seed)
-      final.fit <- blackboost(Surv(time, status) ~ .,
+      final.fit <- mboost::blackboost(Surv(time, status) ~ .,
                               data=train_fold,
                               family = CoxPH(),
                               control=boost_control(mstop = n))
@@ -1059,7 +1053,7 @@ ML.survival.model = function(train_data,
       if(params$layer==1){
         ##1 layer
         set_seed(seed)
-        fit = deephit(Surv(time, status) ~ .,
+        fit =survivalmodels::deephit(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
                       learning_rate=params$lr,
@@ -1071,7 +1065,7 @@ ML.survival.model = function(train_data,
       } else if(params$layer==2){
         ##2 layer
         set_seed(seed)
-        fit = deephit(Surv(time, status) ~ .,
+        fit = survivalmodels::deephit(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
                       learning_rate=params$lr,
@@ -1083,7 +1077,7 @@ ML.survival.model = function(train_data,
       } else if(params$layer==3){
         ##3 layer
         set_seed(seed)
-        fit = deephit(Surv(time, status) ~ .,
+        fit = survivalmodels::deephit(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
                       learning_rate=params$lr,
@@ -1095,7 +1089,7 @@ ML.survival.model = function(train_data,
       } else if(params$layer==4){
         ##4 layer
         set_seed(seed)
-        fit = deephit(Surv(time, status) ~ .,
+        fit = survivalmodels::deephit(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
                       learning_rate=params$lr,
@@ -1243,7 +1237,7 @@ ML.survival.model = function(train_data,
       if(params$layer==1){
         ##1 layer
         set_seed(seed)
-        fit = deephit(Surv(time, status) ~ .,
+        fit =survivalmodels::deepsurv(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
                       learning_rate=params$lr,
@@ -1255,7 +1249,7 @@ ML.survival.model = function(train_data,
       } else if(params$layer==2){
         ##2 layer
         set_seed(seed)
-        fit = deephit(Surv(time, status) ~ .,
+        fit = survivalmodels::deepsurv(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
                       learning_rate=params$lr,
@@ -1267,7 +1261,7 @@ ML.survival.model = function(train_data,
       } else if(params$layer==3){
         ##3 layer
         set_seed(seed)
-        fit = deephit(Surv(time, status) ~ .,
+        fit = survivalmodels::deepsurv(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
                       learning_rate=params$lr,
@@ -1279,7 +1273,7 @@ ML.survival.model = function(train_data,
       } else if(params$layer==4){
         ##4 layer
         set_seed(seed)
-        fit = deephit(Surv(time, status) ~ .,
+        fit = survivalmodels::deepsurv(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
                       learning_rate=params$lr,
@@ -1398,8 +1392,13 @@ ML.survival.model = function(train_data,
     start_time <- Sys.time()
 
     # Set up parallel backend using `future`
-    plan(multisession, workers = ncore)  # Use multisession for parallel execution
-
+    if (.Platform$OS.type == "unix") {
+      # Unix: Mac/Linux
+      future::plan(future.multicore::multicore, workers = ncore)
+    } else {
+      # Windows
+      future::plan(future::multisession, workers = ncore)
+    }
     ## define param grid
     param_grid <- expand.grid(interaction.depth = c(1,3,5,7,9),
                               shrinkage = c(0.001, 0.01, 0.1),
@@ -1411,7 +1410,7 @@ ML.survival.model = function(train_data,
 
     gbm_cox<-function(train_fold,valid_fold,test_fold,fold,params,seed,ncore){
       set.seed(seed)
-      fit <- gbm(Surv(time, status) ~ .,
+      fit <-gbm::gbm(Surv(time, status) ~ .,
                  data = train_fold,
                  distribution = "coxph",
                  n.trees = 10000,
@@ -1443,7 +1442,13 @@ ML.survival.model = function(train_data,
     print("Searching the grid")
 
     # Set up parallel backend using `future`
-    plan(multicore, workers = ncore)  # Use multisession for parallel execution
+    if (.Platform$OS.type == "unix") {
+      # Unix: Mac/Linux
+      future::plan(future.multicore::multicore, workers = ncore)
+    } else {
+      # Windows
+      future::plan(future::multisession, workers = ncore)
+    }
 
     for(i in c(1:nrow(param_grid))) {
       print(i)
@@ -1452,7 +1457,7 @@ ML.survival.model = function(train_data,
       model_list<-list()
       # Parallelize the repetitions loop
 
-      model_list<-future_lapply(1:fold, function(j) {
+      model_list<-future::future_lapply(1:fold, function(j) {
         tryCatch({
           test_index<-folds_list[[1]][[j]]
           train_index <- setdiff(seq_len(nrow(d.train)), test_index)
@@ -1528,7 +1533,13 @@ ML.survival.model = function(train_data,
   glm_model<-function(d.train,d.test,fold,rep,outdir,seed,ncore){
 
     # Set up parallel backend using `future`
-    plan(multicore, workers =ncore)  # Use multisession for parallel execution
+    if (.Platform$OS.type == "unix") {
+      # Unix: Mac/Linux
+      future::plan(future.multicore::multicore, workers = ncore)
+    } else {
+      # Windows
+      future::plan(future::multisession, workers = ncore)
+    }
 
     ## define param grid
     param_grid <- expand.grid(nu=seq(0.1,1,0.1))
@@ -1536,17 +1547,16 @@ ML.survival.model = function(train_data,
     ## modeling
     glm_cox<-function(train_fold,valid_fold,test_fold,params,seed){
       set.seed(seed)
-      fit <- glmboost(Surv(time, status) ~.,
+      fit <-mboost::glmboost(Surv(time, status) ~.,
                       data = train_fold,
                       family = CoxPH(),
                       control = boost_control(mstop=2000,
                                               nu=params),
                       center = FALSE)
-      set.seed(seed)
-      cv10f <- cv(model.weights(fit), type = "kfold")
-      cvm <- cvrisk(fit, folds = cv10f, papply = lapply)
+      cv10f <- mboost::cv(model.weights(fit), type = "kfold")
+      cvm <- mboost::cvrisk(fit, folds = cv10f, papply = lapply)
       n=mstop(cvm)
-      final.fit <- glmboost(Surv(time, status) ~.,
+      final.fit <- mboost::glmboost(Surv(time, status) ~.,
                             data = train_fold,
                             family = CoxPH(),
                             control=boost_control(mstop =n,
@@ -1578,7 +1588,7 @@ ML.survival.model = function(train_data,
       params<-param_grid[i,]
       display.progress(index = i, totalN = nrow(param_grid))
       model_list<-list()
-      model_list<-future_lapply(1:fold,function(j){
+      model_list<-future::future_lapply(1:fold,function(j){
         tryCatch({
 
           test_index<-folds_list[[1]][[j]]

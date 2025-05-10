@@ -44,10 +44,12 @@ The final selected genes and saving plots
 Identify Key Genes Through Feature Frequency Analysis and Visualization
 }
 \examples{
-\dontrun{
-data(5_selected_feature)
-top_feature_select(selected.feature = selected.feature,
-                  nmethod=7,
-                  outdir = '1.feature_select/')
+\donttest{
+data("selected_feature")
+top_feature_select(
+  selected.feature = selected_feature,
+  nmethod = 7,
+  outdir = tempdir()
+)
 }
 }
