@@ -29,12 +29,13 @@ roc_plot <- function(vali_auc_list,
   }
 
   ## loading packages
-  requireNamespace("survival", quietly = TRUE)
+  if (!requireNamespace("survival", quietly = TRUE)) {
+    stop("Package 'survival' required but not installed.")
+  }
 
   ## time dependent plot
   generate_time_roc_plot<-function(index_df,model_name,cohort_name,subdir){
-    ###
-    requireNamespace("survival",quietly = T)
+
     roc<-timeROC::timeROC(T=index_df$time,
                           delta=index_df$status,
                           marker = index_df$pred,
