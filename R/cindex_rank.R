@@ -219,14 +219,50 @@ cindex_rank <- function(vali_auc_list,
       ggplot2::labs(y = "") +
       ggplot2::coord_flip()
 
+    # Side bar plots
+    p4 <- ggplot2::ggplot(
+      test_mean_index,
+      ggplot2::aes(
+        x = .data$Model,
+        y = .data$mean,
+        fill = .data$Value
+      )
+    ) +
+      ggplot2::geom_bar(
+        position = "dodge",
+        stat = "identity"
+      ) +
+      ggplot2::scale_fill_manual(values = "#B8A9C9") +
+      ggplot2::geom_text(
+        ggplot2::aes(label = .data$mean),
+        position = ggplot2::position_dodge(width = 0.9),
+        vjust = 0.5,
+        hjust = 1.2,
+        size = 5
+      ) +
+      ggplot2::theme(
+        axis.title = ggplot2::element_text(size = 14, color = "black"),
+        axis.ticks.x = ggplot2::element_blank(),
+        axis.ticks.y = ggplot2::element_blank(),
+        axis.title.y = ggplot2::element_blank(),
+        axis.text.x = ggplot2::element_blank(),
+        axis.text.y = ggplot2::element_blank(),
+        panel.grid = ggplot2::element_blank(),
+        plot.title = ggplot2::element_text(hjust = 0.5),
+        panel.background = ggplot2::element_rect(fill = "white")
+      ) +
+      ggplot2::labs(y = "") +
+      ggplot2::coord_flip()
+
     # combine plot
     p <- p1 %>%
       aplot::insert_top(p2, height = 0.01) %>%
-      aplot::insert_right(p3, width = 0.25)
+      aplot::insert_right(p3, width = 0.25) %>%
+      aplot::insert_right(p4, width = 0.25)
 
     # Save plot
     ggplot2::ggsave(
-      filename = file.path(outdir, paste0("all_test_", index_label, "_heatmap.jpg")),
+      filename = file.path(outdir, paste0("all_", index_label, "_heatmap.jpg")),
       plot = p,
       width = 4400,
       height = 4800,
