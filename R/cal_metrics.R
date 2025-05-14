@@ -3,7 +3,7 @@
 #' Computes comprehensive survival analysis metrics including risk predictions,
 #' concordance index, integrated Brier score, and time-dependent AUC values.
 #'
-#' @param data Dataframe containing 'time' and 'status' columns
+#' @param newdata Dataframe containing 'time' and 'status' columns
 #' @param model Trained survival model object
 #' @param model_name Model type from supported list:
 #'        "Lasso", "Ridge", "Enet", "RFRSF", "GBM", "CoxBoost", "plsRcox",
@@ -16,20 +16,11 @@
 #'         - bs: Integrated Brier Score
 #'         - km_auc_X: AUC values for X years (1,2,3,5,7,10)
 #' @export
-#' @examples
-#' \dontrun{
-#' data(example_data)
-#' results <- cal_metrics(
-#'   data = example_data,
-#'   model = trained_model,
-#'   model_name = "CoxBoost"
-#' )
-#' }
-cal_metrics <- function(data, model, model_name) {
-  # Early return for invalid data
-  if (is.null(data) || nrow(data) == 0 || sum(data$status) == 0) {
+cal_metrics <- function(newdata, model, model_name) {
+  # Early return for invalid newdata
+  if (is.null(newdata) || nrow(newdata) == 0 || sum(newdata$status) == 0) {
     km_auc_names <- paste0("km_auc_", c(1, 2, 3, 5, 7, 10))
-    km_auc_values <- setNames(as.list(rep(NA, 6)), km_auc_names)
+    km_auc_values <- stats::setNames(as.list(rep(NA, 6)), km_auc_names)
     return(c(
       list(
         pred_df = NA,
@@ -43,10 +34,10 @@ cal_metrics <- function(data, model, model_name) {
   }
 
   # Calculate all metrics
-  pred_df <- cal_pred(data, model, model_name)
-  cindex_obj <- cal_cindex(data, model, model_name)
-  bs_score <- cal_bs(data, model, model_name)
-  auc_values <- cal_multi_auc(data, model, model_name)
+  pred_df <- cal_pred(newdata, model, model_name)
+  cindex_obj <- cal_cindex(newdata, model, model_name)
+  bs_score <- cal_bs(newdata, model, model_name)
+  auc_values <- cal_multi_auc(newdata, model, model_name)
 
   # Return combined results
   c(

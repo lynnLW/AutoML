@@ -14,15 +14,6 @@
 #'         - upper: upper CI
 #'         - p.value: significance
 #' @export
-#' @examples
-#' \dontrun{
-#' data(train_data)
-#' cindex_result <- cal_cindex(
-#'   newdata = train_data,
-#'   model = trained_model,
-#'   model_name = "CoxBoost"
-#' )
-#' }
 cal_cindex <- function(newdata, model, model_name) {
   # Validate input data
   if (is.null(newdata) || !all(c("time", "status") %in% colnames(newdata))) {

@@ -21,16 +21,3 @@ risk score dataframe
 \description{
 Computes risk score using trained survival analysis models
 }
-\examples{
-\donttest{
-# Requires pre-trained model
-library(survival)
-data(example_data)
-cox_model <- coxph(Surv(time, status) ~ ., data = example_data)
-pred_df <- cal_pred(
-  newdata = example_data,
-  model = cox_model,
-  model_name = "CoxBoost"
-)
-}
-}

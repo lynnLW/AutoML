@@ -13,7 +13,7 @@ indexC_comp <- function(own_auc_list,
                         model_name,
                         dataset
 ) {
-  library(compareC)
+  
   df_index <- list()
   ###
   own_auc_list<-lapply(own_auc_list, function(x){x[[model_name]]})
@@ -57,14 +57,14 @@ indexC_comp <- function(own_auc_list,
 
     # saving result
     features<-colnames(df)[3:ncol(df)]
-    feature_combinations <- combn(features, 2, simplify = FALSE)
+    feature_combinations <- utils::combn(features, 2, simplify = FALSE)
 
     for (comb in feature_combinations) {
         x <- df[[comb[1]]]
         y <- df[[comb[2]]]
 
         # compareC to calculate difference
-        cindex_result <- compareC(df$time,df$status,x, y)
+        cindex_result <- compareC::compareC(df$time,df$status,x, y)
 
         # saving results
         sig<-data.frame(comparison=paste(comb, collapse = " vs "),pvalue=cindex_result$pval,dataset=dataset_name)

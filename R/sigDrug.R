@@ -10,15 +10,6 @@
 #' @return A data frame with mean expression values, p-values, fold change, and filtered results (p < 0.05).
 #' @export
 #'
-#' @examples
-#' \donttest{
-#' data("example_expr_data")
-#' sigDrug(
-#'   merge_expr = example_expr_data,
-#'   genelist = c("GeneA", "GeneB"),
-#'   outdir = tempdir()
-#' )
-#' }
 sigDrug <- function(merge_expr, genelist, outdir) {
   # Check input validity
   if (!"group" %in% colnames(merge_expr)) {
@@ -37,7 +28,7 @@ sigDrug <- function(merge_expr, genelist, outdir) {
     dplyr::summarise(dplyr::across(
       tidyselect::all_of(genelist),
       \(x) mean(x, na.rm = TRUE)
-    ) %>%
+    )) %>%
       t() %>%
       as.data.frame()
 

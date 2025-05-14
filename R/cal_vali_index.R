@@ -16,15 +16,6 @@
 #'              - bs : integrated brier score
 #'              - auc : 1,2,3,5,7,10- year auc values
 #' @export
-#' @examples
-#' \dontrun{
-#' data(st_train_vali_Data)
-#' test.auc<-cal_vali_index(list_train_vali_Data,
-#' candidate_genes,
-#' model_list,
-#' rep=1,
-#' outdir=out3)
-#' }
 cal_vali_index <- function(list_train_vali_Data, # A list contain the dataframe for testing
                     candidate_genes, # features used to train model
                     model_list, #model list
@@ -33,25 +24,6 @@ cal_vali_index <- function(list_train_vali_Data, # A list contain the dataframe 
                     rep=1,
                     outdir="4.test/"
 ) {
-  #### loading the packages ########
-  if (T) {
-    library(survival)
-    library(randomForestSRC)
-    library(glmnet)
-    library(survcomp)
-    library(plsRcox)
-    library(superpc)
-    library(gbm)
-    library(CoxBoost)
-    library(survivalsvm)
-    library(xgboost)
-    library(Hmisc)
-    library(survivalROC)
-    library(survivalmodels)
-    library(keras)
-    library(tensorflow)
-    options(stringsAsFactors = FALSE) # 禁止chr转成factor
-  }
 
   if(!dir.exists(outdir)){
       dir.create(outdir,recursive = T)
@@ -103,15 +75,7 @@ cal_vali_index <- function(list_train_vali_Data, # A list contain the dataframe 
     list_train_vali_Data<-list_train_vali_Data
   }
 
-  ## loading common function
-  if(F){
-    source("R/cal_pred.R")
-    source("R/cal_cindex.R")
-    source("R/cal_bs.R")
-    source("R/cal_multi_auc.R")
-    source("R/cal_metrics.R")
-  }
-
+  ## calculate cindex
   model_auc_list<-list()
   for (i in 1:length(model_list)){
     models=model_list[[i]]

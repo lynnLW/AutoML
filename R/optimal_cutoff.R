@@ -7,12 +7,6 @@
 #' @param pred Column name containing prediction scores (quoted string)
 #' @return Optimal cutoff value (numeric)
 #' @export
-#' @examples
-#' \dontrun{
-#' data(lung, package = "survival")
-#' optimal_cutoff(lung, "time", "status", "ph.karno")
-#' }
-
 optimal_cutoff <- function(data, time, status, pred) {
 
   required_cols <- c(time, status, pred)

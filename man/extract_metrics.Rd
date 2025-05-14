@@ -22,8 +22,3 @@ List containing three data frames:
 Computes mean performance metrics across training, validation and test sets
 from multiple cross-validated models
 }
-\examples{
-\dontrun{
-cv_results <- extract_metrics(model_list = cv_models)
-}
-}

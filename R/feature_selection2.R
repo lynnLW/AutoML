@@ -12,14 +12,12 @@
 #' @param seed  The seed
 #' @param height 8
 #' @param width 10
+#' @import dplyr
+#' @importFrom utils write.csv write.table head
+#' @importFrom stats pairwise.wilcox.test as.formula
+#' @import survival
 #' @return feature list
 #' @export
-#' @examples
-#' \donttest{
-#' # Requires trained data and genelist
-#' data(train_data)
-#' selected.feature<-feature_selection2(InputMatrix,genelist=genelist)
-#' }
 feature_selection2 <- function(InputMatrix,
                                 genelist,
                                 filter_OS_time=F,
@@ -30,21 +28,6 @@ feature_selection2 <- function(InputMatrix,
                                 seed = 123,
                                 height=8,
                                 width=10) {
-  ### loading the packages ####
-  if (T) {
-    Biocductor_packages <- c(
-      "survival",
-      "glmnet",
-      "Boruta",
-      "Ckmeans.1d.dp",
-      "Matrix",
-      "YSX"
-    )
-
-    lapply(Biocductor_packages, function(x) {
-      library(x,character.only = T)
-    })
-  }
 
   ## setting the parameters
   if (T) {
@@ -111,7 +94,7 @@ feature_selection2 <- function(InputMatrix,
     run_diff_gene<-function(input,genes,diff_pcutoff = 0.05,outdir){
       ###diff expression
       df_mean<- input %>%
-        group_by(OS_status)%>%
+        group_by(.data$OS_status)%>%
         summarise(across(everything(),\(x) mean(x, na.rm = TRUE)))%>%
         t() %>% as.data.frame()
       names(df_mean)<-df_mean[1,]
@@ -169,15 +152,9 @@ feature_selection2 <- function(InputMatrix,
   outTab <- NULL
   surv <- InputMatrix[,-1]
   for(i in 3:ncol(surv)){ # survival information (OS in this case)
-    # customized function
-    display.progress = function (index, totalN, breakN=20) {
-      if ( index %% ceiling(totalN/breakN)  ==0  ) {
-        cat(paste(round(index*100/totalN), "% ", sep=""))
-      }
-    }
-    display.progress(index = i, totalN = ncol(surv)) # show running progression
+    display_progress(index = i, totalN = ncol(surv)) # show running progression
     gene <- colnames(surv)[i]
-    Mboot <- future_replicate(1000, expr = { # bootstrap for 1,000 times
+    Mboot <- future.apply::future_replicate(1000, expr = { # bootstrap for 1,000 times
       indices <- sample(rownames(surv), size = nrow(surv) * 0.8, replace = F) # extract 80% samples at each bootsratp
       data <- surv[indices,]
       fmla1 <- as.formula(Surv(data[,"OS_time"],data[,"OS_status"]) ~ data[,gene])
@@ -210,14 +187,13 @@ feature_selection2 <- function(InputMatrix,
     set.seed(seed)
     data<-input[,-1]
     data$OS_status<-as.factor(data$OS_status)
-    boruta<-Boruta(OS_status ~.,data = data,doTrace=2,maxRuns = 1000,ntree=1000)
+    boruta<-Boruta::Boruta(OS_status ~.,data = data,doTrace=2,maxRuns = 1000,ntree=1000)
     boruta
     ##
     print("plot the importance of feature")
     boruta.variable.imp <- boruta.imp(boruta)
     head(boruta.variable.imp)
-    library("YSX")
-    p<-sp_boxplot(boruta.variable.imp, melted=T, xvariable = "Variable", yvariable = "Importance",
+    p<-YSX::sp_boxplot(boruta.variable.imp, melted=T, xvariable = "Variable", yvariable = "Importance",
                   legend_variable = "finalDecision",x_label = "",coordinate_flip=F,
                   title="Feature importance",
                   legend_variable_order = c("shadowMax", "shadowMean", "shadowMin", "Tentative","Confirmed"),
@@ -231,9 +207,6 @@ feature_selection2 <- function(InputMatrix,
     return(selected.feature)
   }
   boruta.imp <- function(x){
-    library(dplyr)
-    library(Boruta)
-    library(caret)
     imp <- reshape2::melt(x$ImpHistory, na.rm=T)[,-1]
     colnames(imp) <- c("Variable","Importance")
     imp <- imp[is.finite(imp$Importance),]
@@ -248,8 +221,8 @@ feature_selection2 <- function(InputMatrix,
 
     boruta.variable.imp <- merge(imp, variableGrp, all.x=T)
 
-    sortedVariable <- boruta.variable.imp %>% group_by(Variable) %>%
-      summarise(median=median(Importance)) %>% arrange(median)
+    sortedVariable <- boruta.variable.imp %>% group_by(.data$Variable) %>%
+      summarise(median=median(.data$Importance)) %>% arrange(median)
     sortedVariable <- as.vector(sortedVariable$Variable)
 
 

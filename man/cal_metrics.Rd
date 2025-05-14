@@ -4,10 +4,10 @@
 \alias{cal_metrics}
 \title{Calculate Survival Risk Scores and Metrics (C-index, IBS, AUC)}
 \usage{
-cal_metrics(data, model, model_name)
+cal_metrics(newdata, model, model_name)
 }
 \arguments{
-\item{data}{Dataframe containing 'time' and 'status' columns}
+\item{newdata}{Dataframe containing 'time' and 'status' columns}
 
 \item{model}{Trained survival model object}
 
@@ -27,14 +27,4 @@ List containing:
 \description{
 Computes comprehensive survival analysis metrics including risk predictions,
 concordance index, integrated Brier score, and time-dependent AUC values.
-}
-\examples{
-\dontrun{
-data(example_data)
-results <- cal_metrics(
-  data = example_data,
-  model = trained_model,
-  model_name = "CoxBoost"
-)
-}
 }

@@ -7,20 +7,9 @@
 #' @param model_name Model specification. Supported models:
 #'   "Lasso", "Ridge", "Enet", "RFRSF", "GBM", "CoxBoost", "plsRcox",
 #'   "XGBoost", "BlackBoost", "DeepHit", "DeepSurv", "SurvivalSVM"
+#' @importFrom stats predict
+#' @importFrom survival Surv
 #' @return risk score dataframe
-#' @export
-#' @examples
-#' \donttest{
-#' # Requires pre-trained model
-#' library(survival)
-#' data(example_data)
-#' cox_model <- coxph(Surv(time, status) ~ ., data = example_data)
-#' pred_df <- cal_pred(
-#'   newdata = example_data,
-#'   model = cox_model,
-#'   model_name = "CoxBoost"
-#' )
-#' }
 cal_pred<-function(newdata,model,model_name){
   # Parameter validation ----------------------------------------------------
   required_cols <- c("time", "status")
@@ -44,20 +33,35 @@ cal_pred<-function(newdata,model,model_name){
   pred_df<-data.frame()
   ##
   if (model_name %in% c("Lasso","Enet","Ridge")){
+    if (!requireNamespace(c("glmnet"), quietly = TRUE)) {
+      stop("Package glmnet required: install.packages('glmnet')")
+    }
     pred_coxb =as.numeric(predict(model,type='link',
                                   newx=as.matrix(newdata[,3:ncol(newdata)]),
-                                  s = model$lambda.min))
+                                  s = model$lambda))
   } else if (model_name %in% c("RFRSF","SurvivalSVM")){
     pred_coxb=as.numeric(predict(model,newdata)$predicted)
 
-  } else if (model_name %in% c("GBM","GLMBoost","Survreg")){
+  } else if (model_name %in% c("GBM")){
+    pred_coxb=as.numeric(gbm::predict.gbm(model,newdata))
+
+  } else if (model_name %in% c("GLMBoost","Survreg")){
     pred_coxb=as.numeric(predict(model,newdata))
 
-  } else if (model_name %in% c("CoxBoost","plsRcox")){
+  } else if (model_name %in% c("CoxBoost")){
+    if (!requireNamespace(c("CoxBoost"), quietly = TRUE)) {
+      stop("Package CoxBoost required: install.packages('CoxBoost')")
+    }
     pred_coxb <- as.numeric(predict(model,newdata=newdata[,-c(1,2)],
                                     newtime=newdata[,'time'],
                                     newstatus=newdata[,'status'],
                                     type="lp"))
+
+  } else if (model_name %in% c("plsRcox")){
+    pred_coxb <- as.numeric(predict(model,newdata=newdata[,-c(1,2)],
+                                                        newtime=newdata[,'time'],
+                                                        newstatus=newdata[,'status'],
+                                                        type="risk"))
 
   } else if (model_name %in% c("SuperPC")){
     test <- list(x=t(newdata[,-c(1,2)]),
@@ -83,7 +87,7 @@ cal_pred<-function(newdata,model,model_name){
   } else if (model_name %in% c("DeepHit")){
     train_fold<-data.frame(model$y,model$x)
     params=model$best_param[[1]]
-    set_seed(123)
+    survivalmodels::set_seed(123)
     re_model <- survivalmodels::deephit(formula = Surv(time, status) ~ ., data = train_fold,
                         frac = 0.2, activation = "relu",
                         num_nodes = c(params$nd1, params$nd2, params$nd3, params$nd4),
@@ -93,7 +97,7 @@ cal_pred<-function(newdata,model,model_name){
   } else if (model_name %in% c("DeepSurv")){
     train_fold<-data.frame(model$y,model$x)
     params=model$best_param[[1]]
-    set_seed(123)
+    survivalmodels::set_seed(123)
     re_model <- survivalmodels::deepsurv(formula = Surv(time, status) ~ ., data = train_fold,
                          frac = 0.2, activation = "relu",
                          num_nodes = c(params$nd1, params$nd2, params$nd3, params$nd4),
@@ -101,7 +105,6 @@ cal_pred<-function(newdata,model,model_name){
                          epochs = params$epochs, learning_rate = params$lr)
     pred_coxb=as.numeric(predict(re_model,newdata,type = "risk"))
   }
-
   pred_df=data.frame(row.names = row.names(newdata),
                      "time"=newdata$time,
                      "status"=newdata$status,

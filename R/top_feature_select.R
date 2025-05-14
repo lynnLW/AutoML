@@ -17,16 +17,6 @@
 #' @return The final selected genes and saving plots
 #' @export
 #'
-#' @examples
-#' \donttest{
-#' data("selected_feature")
-#' top_feature_select(
-#'   selected.feature = selected_feature,
-#'   nmethod = 7,
-#'   outdir = tempdir()
-#' )
-#' }
-
 top_feature_select <- function(
     selected.feature,
     featurelist = NULL,
@@ -66,14 +56,14 @@ top_feature_select <- function(
 
   # Frequency ------------------------------------------------------------
   feature_freq <- if (!is.null(selected.feature)) {
-    dplyr::count(selected.feature, selected.fea, name = "Frequence") %>%
-      dplyr::arrange(dplyr::desc(Frequence)) %>%
-      dplyr::mutate(selected.fea = gsub("\\.", "-", selected.fea))
+    dplyr::count(selected.feature, .data$selected.fea, name = "Frequence") %>%
+      dplyr::arrange(dplyr::desc(.data$Frequence)) %>%
+      dplyr::mutate(selected.fea = gsub("\\.", "-", .data$selected.fea))
   } else {
     purrr::map_df(featurelist[sets], ~ tibble::tibble(gene = .x), .id = "method") %>%
-      dplyr::count(gene, name = "Frequence") %>%
-      dplyr::arrange(dplyr::desc(Frequence)) %>%
-      dplyr::mutate(gene = gsub("\\.", "-", gene))
+      dplyr::count(.data$gene, name = "Frequence") %>%
+      dplyr::arrange(dplyr::desc(.data$Frequence)) %>%
+      dplyr::mutate(gene = gsub("\\.", "-", .data$gene))
   }
 
   # saving results ----------------------------------------------------------------
@@ -115,8 +105,8 @@ top_feature_select <- function(
     p <- ggplot2::ggplot(
       plot_data,
       ggplot2::aes(
-        x = stats::reorder(.data[[names(plot_data)[1]]], Frequence),
-        y = Frequence
+        x = stats::reorder(.data[[names(plot_data)[1]]], .data$Frequence),
+        y = .data$Frequence
       )
     ) +
       ggplot2::geom_segment(
@@ -124,7 +114,7 @@ top_feature_select <- function(
         color = "#377EB8"
       ) +
       ggplot2::geom_point(
-        ggplot2::aes(size = Frequence),
+        ggplot2::aes(size = .data$Frequence),
         color = "#4DAF4A",
         alpha = 0.8
       ) +

@@ -8,19 +8,11 @@
 #' @param dataset_col Optional color vector for datasets (default uses ggplot colors)
 #' @param dataset Character vector of dataset names
 #' @param index Metrics to compare ("cindex", "AUC_1", "AUC_3", etc.)
+#' @import ggplot2
+#'
 #' @return ggplot2 object showing performance comparison
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' index_comp(
-#'   own_auc_list = my_results,
-#'   published_auc_list = literature_data,
-#'   model_name = "CoxBoost",
-#'   dataset = c("TCGA", "GSE12345"),
-#'   index = c("cindex", "AUC_1", "AUC_3")
-#' )
-#' }
 index_comp <- function(own_auc_list,
                      published_auc_list=NULL,
                      model_name, ## input specific model name
@@ -28,8 +20,6 @@ index_comp <- function(own_auc_list,
                      dataset, # input datasets name
                      index #Cindex, AUC_1,3,5,7
 ) {
-  library(ggplot2)
-  library(aplot)
 
   if (is.null(dataset_col) == T) {
     dataset_col <- c(
@@ -104,9 +94,9 @@ index_comp <- function(own_auc_list,
   }
   ###
   generate_p<-function(index_df_select,index){
-    ggplot(index_df_select, aes(x = Signature, y = .data[[index]])) +
-      geom_segment(aes(x = Signature, xend = Signature, y = 0, yend = .data[[index]], color = ID)) +
-      geom_point(aes(color = ID)) +
+    ggplot(index_df_select, aes(x =.data$Signature, y = .data[[index]])) +
+      geom_segment(aes(x = .data$Signature, xend = .data$Signature, y = 0, yend = .data[[index]], color = .data$ID)) +
+      geom_point(aes(color = .data$ID)) +
       scale_color_manual(values = dataset_col[t], name = "Cohort") +
       theme(
         panel.grid = element_blank(),

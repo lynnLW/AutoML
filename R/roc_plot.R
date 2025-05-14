@@ -7,14 +7,11 @@
 #' @param auc_time Specific time point for time-dependent ROC analysis
 #' @param outdir Output directory path for saving plots
 #' @param colors Custom color palette for cohorts (length should match number of cohorts)
+#' @import ggplot2
+#' @import survival
+#' @importFrom dplyr %>% distinct arrange mutate left_join
 #' @return ggplot object or list of ggplot objects
 #' @export
-#' @examples
-#' \dontrun{
-#' roc_plot(vali_auc_list = validation_results,
-#'          model = "CoxBoost",
-#'          outdir = "./plots")
-#' }
 roc_plot <- function(vali_auc_list,
                      model="all", ## modelname or all
                      cohort=NULL,
@@ -22,7 +19,6 @@ roc_plot <- function(vali_auc_list,
                      outdir=NULL,
                      colors = NULL # color value for cohort
 ){
-
   if (is.null(colors) == T) {
     colors <- c(RColorBrewer::brewer.pal(9, "Set1"),
                      "#3182BDFF", "#E6550DFF", "#31A354FF", "#756BB1FF", "#636363FF", "#6BAED6FF", "#FD8D3CFF", "#74C476FF",
@@ -32,9 +28,13 @@ roc_plot <- function(vali_auc_list,
     colors <- colors
   }
 
-  ###time dependent plot
+  ## loading packages
+  requireNamespace("survival", quietly = TRUE)
+
+  ## time dependent plot
   generate_time_roc_plot<-function(index_df,model_name,cohort_name,subdir){
     ###
+    requireNamespace("survival",quietly = T)
     roc<-timeROC::timeROC(T=index_df$time,
                           delta=index_df$status,
                           marker = index_df$pred,
@@ -43,19 +43,19 @@ roc_plot <- function(vali_auc_list,
                           times=c(1,3,5)*12,
                           iid=T)
 
-    jpeg(filename=paste0(subdir,"/",cohort_name,"_time_roc_plot.jpg"),width = 10, height = 10, units = "cm", res = 600)
+    grDevices::jpeg(filename=paste0(subdir,"/",cohort_name,"_time_roc_plot.jpg"),width = 10, height = 10, units = "cm", res = 600)
     plot(roc,time=1*12,col="#31A354FF",lty=1,lwd=2,title="")
     plot(roc,time=3*12,col="#3182BDFF",add=T,lty=1,lwd=2)
     plot(roc,time=5*12,col="#E6550DFF",add=T,lty=1,lwd=2)
     ##
-    legend("bottomright",
+    graphics::legend("bottomright",
            c(paste0("1-year AUC: ",round(roc[["AUC"]][1],2)),
              paste0("3-year AUC: ",round(roc[["AUC"]][2],2)),
              paste0("5-year AUC: ",round(roc[["AUC"]][3],2))),
            col=c("#31A354FF","#3182BDFF","#E6550DFF"),
            lty=1,lwd=2,bty="n")
-    title(paste0(cohort_name))
-    dev.off()
+    graphics::title(paste0(cohort_name))
+    grDevices::dev.off()
   }
 
   ###cohort dependet plot
@@ -77,29 +77,29 @@ roc_plot <- function(vali_auc_list,
     }
 
     feature_order <- auc_df %>%
-      dplyr::distinct(feature, auc) %>%
-      dplyr::arrange(desc(auc)) %>%
-      dplyr::mutate(feature_with_auc = sprintf("%s (AUC=%.2f)", feature, auc)) %>%
+      dplyr::distinct(.data$feature, .data$auc) %>%
+      dplyr::arrange(desc(.data$auc)) %>%
+      dplyr::mutate(feature_with_auc = sprintf("%s (AUC=%.2f)", .data$feature, .data$auc)) %>%
       dplyr::left_join(dataset_col_df, by = c("feature" = "Feature"))
 
 
     roc_data <- roc_data %>%
       dplyr::left_join(feature_order, by = c("feature")) %>%
-      dplyr::mutate(feature = factor(feature, levels = feature_order$feature))
+      dplyr::mutate(feature = factor(.data$feature, levels = feature_order$feature))
 
 
-    p <-ggplot2::ggplot(roc_data, aes(x = fpr, y = tpr,
-                              color = feature)) +
-      geom_line(size = 1) +
-      geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey") +
-      labs(
+    p <-ggplot2::ggplot(roc_data, aes(x = .data$fpr, y = .data$tpr,
+                              color = .data$feature)) +
+      ggplot2::geom_line(size = 1) +
+      ggplot2::geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey") +
+      ggplot2::labs(
         title = paste0(auc_time,"-year ROC Curve for ", dataset_name),
         x = "False Positive Rate",
         y = "True Positive Rate",
         color = "Features (AUC)"
       ) +
-      theme_bw() +
-      theme(
+      ggplot2::theme_bw() +
+      ggplot2::theme(
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         axis.text = element_text(color = "black", size = 8),
@@ -116,7 +116,7 @@ roc_plot <- function(vali_auc_list,
         legend.text = element_text(color = "black", size =8),
         legend.title = element_text(color = "black", size = 8)
       ) +
-      scale_color_manual(
+      ggplot2::scale_color_manual(
         values = feature_order$col,
         breaks = feature_order$feature,
         labels=feature_order$feature_with_auc,

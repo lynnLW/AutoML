@@ -23,10 +23,3 @@ A list of length `nrepeats`, where each element is a list of fold indices.
 \description{
 Generates repeated stratified cross-validation folds while preserving class distribution.
 }
-\examples{
-\dontrun{
-data(iris)
-folds <- create_folds(iris, fold = 5, nrepeats = 3, strata = "Species", seed = 123)
-}
-
-}

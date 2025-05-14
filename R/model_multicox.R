@@ -11,34 +11,20 @@
 #' @param plot_height Plot height in units of 400 pixels (NULL for default)
 #' @param plot_width Plot width in units of 300 pixels (NULL for default)
 #' @return Dataframe containing Cox regression results
+#' @import dplyr
+#' @import survival
+#' @importFrom stats quantile median
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' results <- generate_multicox_analysis(
-#'   data = clinical_data,
-#'   features = c("age", "gender", "stage"),
-#'   gene = "TP53",
-#'   dataset_name = "TCGA_LUAD",
-#'   outdir = "./results"
-#' )
-#' }
-
-
 generate_multicox_analysis <- function(data, features, gene, dataset_name, outdir,
                                   cut_type = NULL, plot_height = NULL,plot_width=NULL) {
-  #loading package
-  library(survival)
-  library(survminer)
-  library(dplyr)
-
   # log
   log_file <- file.path(outdir, "analysis_errors.log")
   if (!file.exists(log_file)) file.create(log_file)
 
   # main function ------------------------------------------------------------
 
-  #' check the input
+  # check the input
   validate_input <- function(data, features, gene) {
     required_cols <- c("time", "status", features, gene)
     missing_cols <- setdiff(required_cols, colnames(data))
@@ -47,11 +33,11 @@ generate_multicox_analysis <- function(data, features, gene, dataset_name, outdi
     }
   }
 
-  #' preprocessing of continual or discrete
+  # preprocessing of continual or discrete
   preprocess_data <- function(data, gene, cut_type) {
     if (!is.null(cut_type)) {
       ##best cutpoint
-      cutpoint <- surv_cutpoint(data,time = "time",event = "status",variables = gene)
+      cutpoint <-survminer::surv_cutpoint(data,time = "time",event = "status",variables = gene)
       ##other
       cutoff <- switch(
         cut_type,
@@ -68,7 +54,7 @@ generate_multicox_analysis <- function(data, features, gene, dataset_name, outdi
     return(data)
   }
 
-  #' checking separation
+  # checking separation
   check_separation <- function(data, gene, features) {
     # categorical variables
     if (!is.numeric(data[[gene]])) {
@@ -100,7 +86,7 @@ generate_multicox_analysis <- function(data, features, gene, dataset_name, outdi
     }
   }
 
-  #' modeling
+  # modeling
   fit_robust_cox <- function(data, features, gene, log_file) {
     formula_str <- paste(
       "Surv(time, status) ~",
@@ -125,7 +111,7 @@ generate_multicox_analysis <- function(data, features, gene, dataset_name, outdi
     )
   }
 
-  #' extract result
+  # extract result
   extract_cox_results <- function(model, dataset_name) {
     summary(model)$coefficients %>%
       as.data.frame() %>%
@@ -133,14 +119,14 @@ generate_multicox_analysis <- function(data, features, gene, dataset_name, outdi
       dplyr::mutate(dataset = dataset_name)
   }
 
-  #' saving results
+  # saving results
   save_cox_results <- function(result, dataset_name, outdir, cut_type) {
     suffix <- ifelse(is.null(cut_type), "continuous", paste0("discrete_", cut_type))
     filename <- file.path(outdir, paste0(dataset_name, "_", suffix, "_cox.csv"))
     write.csv(result, filename, row.names = FALSE)
   }
 
-  #' generate forest plot
+  # generate forest plot
   generate_cox_plot <- function(model,data,dataset_name,width,
                                 height,cut_type,outdir,log_file) {
     tryCatch({

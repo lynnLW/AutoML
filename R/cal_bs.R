@@ -6,21 +6,8 @@
 #' @param model Trained survival analysis model object
 #' @param model_name Model specification. Supported models:
 #'   "Lasso", "Ridge", "Enet", "RFRSF", "GBM", "CoxBoost", "plsRcox",
-#'   "XGBoost", "BlackBoost", "DeepHit", "DeepSurv", "SurvivalSVM"
+#'   "XGBoost", "BlackBoost", "DeepHit", "DeepSurv", "SurvivalSVM","GLMBoost","SuperPC"
 #' @return Numeric Integrated Brier Score (IBS), where lower values indicate better performance
-#' @export
-#' @examples
-#' \donttest{
-#' # Requires pre-trained model
-#' library(survival)
-#' data(example_data)
-#' cox_model <- coxph(Surv(time, status) ~ ., data = example_data)
-#' ibs_score <- calculate_ibs(
-#'   newdata = example_data,
-#'   model = cox_model,
-#'   model_name = "CoxBoost"
-#' )
-#' }
 cal_bs <- function(newdata, model, model_name) {
   # Parameter validation ----------------------------------------------------
   required_cols <- c("time", "status")

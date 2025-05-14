@@ -9,6 +9,9 @@
 #' @param width plot width
 #' @param height plot height
 #' @param outdir the output directory
+#' @import ggpubr
+#' @import dplyr
+#' @importFrom utils combn
 generate_two_boxplot<-function(expr_matrix, ### expr dataframe col features rows accession
                          genelist, ### gene or geneset
                          grouping, # grouping information col1:accession col2:group
@@ -18,9 +21,7 @@ generate_two_boxplot<-function(expr_matrix, ### expr dataframe col features rows
                          width=5.5,
                          height=7,
                          outdir="gene_expression/boxplot/"){
-  ##loading packages
-  library(dplyr)
-  library(ggpubr)
+
   ##
   if (is.null(dataset_name)){
     dataset_name=gene
@@ -78,7 +79,7 @@ generate_two_boxplot<-function(expr_matrix, ### expr dataframe col features rows
                   palette ="Paired",
                   title=dataset_name)
       p<-p+
-        geom_boxplot(aes(x = group, y = expr1[[gene]]),
+        geom_boxplot(aes(x = .data$group, y = expr1[[gene]]),
                      fill = "white",
                      color="black",
                      width = 0.07,
@@ -122,7 +123,7 @@ generate_two_boxplot<-function(expr_matrix, ### expr dataframe col features rows
                     palette ="Paired",
                     title=dataset_name)
         p<-p+
-          geom_boxplot(aes(x = group, y = expr2[[gene]]),
+          geom_boxplot(aes(x = .data$group, y = expr2[[gene]]),
                        fill = "white",
                        color="black",
                        width = 0.07,

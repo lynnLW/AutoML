@@ -24,16 +24,3 @@ List containing AUC values, false positive rates, and true positive rates
 \description{
 Computes area under the ROC curve (AUC) at specified time points for survival models
 }
-\examples{
-\donttest{
-data(example_data)
-model <- ML.survival.model(example_data)
-auc_results <- calculate_multi_auc(
-  newdata = example_data,
-  model = model,
-  model_name = "CoxBoost",
-  cuts = c(2,5),
-  unit = "y"
-)
-}
-}

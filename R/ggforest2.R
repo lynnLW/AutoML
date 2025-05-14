@@ -13,7 +13,7 @@
 #' @return returns a ggplot2 object (invisibly)
 #' @import broom
 #' @import grid
-#' @import gridExtra
+#' @import insight
 #' @importFrom grDevices axisTicks
 #' @importFrom stats anova var
 
@@ -22,14 +22,12 @@ ggforest2 <- function(model, data = NULL,
                      fontsize = 0.7, refLabel = "reference", noDigits=2) {
   conf.high <- conf.low <- estimate <- NULL
   stopifnot(inherits(model, "coxph"))
-  library(insight)
   # get data and variables/terms from cox model
   data  <- get_data(model, data = data)
   terms <- attr(model$terms, "dataClasses")[-1]
   # removed as requested in #388
   #  terms <- terms[intersect(names(terms),
   #    gsub(rownames(anova(model))[-1], pattern = "`", replacement = ""))]
-  library(broom)
   # use broom to get some required statistics
   coef <- as.data.frame(tidy(model, conf.int = TRUE))
   gmodel <- glance(model)
@@ -97,7 +95,6 @@ ggforest2 <- function(model, data = NULL,
   y_cistring <- rangeplot[1]  +  cpositions[3] * width
   y_stars <- rangeb[2]
   x_annotate <- seq_len(nrow(toShowExpClean))
-  library(grid)
   # geom_text fontsize is in mm (https://github.com/tidyverse/ggplot2/issues/1828)
   annot_size_mm <- fontsize *
     as.numeric(convertX(unit(theme_get()$text$size, "pt"), "mm"))

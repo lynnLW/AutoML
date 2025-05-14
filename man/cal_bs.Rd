@@ -13,24 +13,11 @@ cal_bs(newdata, model, model_name)
 
 \item{model_name}{Model specification. Supported models:
 "Lasso", "Ridge", "Enet", "RFRSF", "GBM", "CoxBoost", "plsRcox",
-"XGBoost", "BlackBoost", "DeepHit", "DeepSurv", "SurvivalSVM"}
+"XGBoost", "BlackBoost", "DeepHit", "DeepSurv", "SurvivalSVM","GLMBoost","SuperPC"}
 }
 \value{
 Numeric Integrated Brier Score (IBS), where lower values indicate better performance
 }
 \description{
 Computes Integrated Brier Score using trained survival analysis models
-}
-\examples{
-\donttest{
-# Requires pre-trained model
-library(survival)
-data(example_data)
-cox_model <- coxph(Surv(time, status) ~ ., data = example_data)
-ibs_score <- calculate_ibs(
-  newdata = example_data,
-  model = cox_model,
-  model_name = "CoxBoost"
-)
-}
 }

@@ -9,16 +9,8 @@
 #'
 #' @return Invisibly returns `NULL`. Prints progress to console as a side effect.
 #'
-#' @examples
-#' \dontrun{
-#' for (i in 1:100) {
-#'   display.progress(i, 100, breakN = 10)  # Update every 10%
-#'   Sys.sleep(0.1)
-#' }
-#' }
-#'
 #' @export
-display.progress <- function(index, totalN, breakN = 20) {
+display_progress <- function(index, totalN, breakN = 20) {
   # Input validation
   if (!is.numeric(index) || length(index) != 1 || index < 1) {
     stop("`index` must be a positive integer.")

@@ -11,15 +11,7 @@ run_meta_combine<-function(list_data_surv,
                            sets=NULL,
                            features=c("Sample_ID","Age","PSA","GS","path_T"),
                            outdir="dataset/"){
-  ##loading packages
-  library(tinyarray)
-  library(FactoMineR)
-  library(factoextra)
-  library(sva)
-  library(dplyr)
-  library(stringr)
-  library(ggplot2)
-  library(cowplot)
+  
   ##output directory
   if(!dir.exists(outdir)){
       dir.create(outdir,recursive = T)

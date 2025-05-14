@@ -8,16 +8,6 @@
 #' @param color Custom color vector for risk groups (length should match number of groups)
 #' @return ggplot object or list of ggplot objects
 #' @export
-#' @examples
-#' \dontrun{
-#' # Plot survival curves for all models
-#' surv_plot(vali_auc_list = validation_data)
-#'
-#' # Plot specific model and save to directory
-#' surv_plot(vali_auc_list = validation_data,
-#'          model = "Cox",
-#'          outdir = "./survival_plots")
-#' }
 surv_plot <- function(vali_auc_list,
                       model="all", ## modelname or all
                       optim=T,

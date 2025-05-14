@@ -10,12 +10,6 @@
 #'
 #' @return A list of length `nrepeats`, where each element is a list of fold indices.
 #' @export
-#' @examples
-#' \dontrun{
-#' data(iris)
-#' folds <- create_folds(iris, fold = 5, nrepeats = 3, strata = "Species", seed = 123)
-#' }
-#'
 create_folds <- function(data, fold, nrepeats, strata, seed) {
   if (!is.data.frame(data)) {
     stop("`data` must be a data frame.")

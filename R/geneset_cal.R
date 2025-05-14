@@ -15,15 +15,10 @@
 #' @return GSVA enrichment score matrix
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' # Using named list
-#' custom_sets <- list(DNA_repair = c("BRCA1", "BRCA2", "TP53"),
-#'                    Cell_cycle = c("CDK1", "CDK2", "CCND1"))
-#' gsva_results <- geneset_cal(expr_matrix = expr_data,
-#'                               geneset = custom_sets)
-#' }
-
+#' @import dplyr
+#' @import GSVA
+#' @import msigdbr
+#' @importFrom utils data
 geneset_cal <- function(expr_matrix,
                         category = NULL,
                         subcategory = NULL,
@@ -33,12 +28,6 @@ geneset_cal <- function(expr_matrix,
                         prefix = NULL,
                         output_dir = "./GSVA_Results") {
 
-  # parameter ----------------------------------------------------------------
-  suppressPackageStartupMessages({
-    require(GSVA, quietly = TRUE)
-    require(msigdbr, quietly = TRUE)
-    require(dplyr, quietly = TRUE)
-  })
 
   # expr matrix
   if (!is.matrix(expr_matrix) && !is.data.frame(expr_matrix)) {
@@ -61,8 +50,8 @@ geneset_cal <- function(expr_matrix,
   # getting gene set
   get_genesets <- function(){
     # loading internal gene sets
-    if(F){
-      internal_genesets <- get(load("data/internal_genesets.rdata"))
+    if(T){
+      internal_genesets <- .load_internal_genesets()
       msigdb_categories <- c("C3","C2","C8","C6","C7","C4","C5","H","C1")
     }
 
@@ -74,8 +63,8 @@ geneset_cal <- function(expr_matrix,
         gs_data <- msigdbr(species = species,
                            category = category,
                            subcategory = subcategory) %>%
-          group_by(gs_name) %>%
-          distinct(gene_symbol, .keep_all = TRUE) %>%
+          group_by(.data$gs_name) %>%
+          distinct(.data$gene_symbol, .keep_all = TRUE) %>%
           ungroup()
 
         gs_list <- split(gs_data$gene_symbol, gs_data$gs_name)
@@ -161,13 +150,14 @@ geneset_cal <- function(expr_matrix,
 
   # main function --------------------------------------------------------------
   tryCatch({
+
     # getting gene sets
     gs_info <- get_genesets()
     gs_list <- gs_info$gs
     prefix <- gs_info$prefix
 
     # GSVA
-    gsva_scores <- gsva(
+    gsva_scores <- GSVA::gsva(
       expr = as.matrix(expr_matrix),
       gset.idx.list = gs_list,
       method = method,

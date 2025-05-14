@@ -13,24 +13,13 @@
 #' @param outdir Output directory path
 #' @param seed Random seed
 #' @param ncore Number of CPU cores for parallelization
+#' @importFrom dplyr %>% group_by summarise
+#' @importFrom ggplot2 ggplot aes geom_point
+#' @importFrom stats predict median model.weights
+#' @importFrom survival Surv
 #'
 #' @return List containing trained models and evaluation metrics
 #' @export
-#'
-#' @examples
-#' \dontrun{
-#' # Example usage
-#' model_list <- ML.survival.model(
-#'   train_data = survival_df,
-#'   candidate_genes = c("gene1", "gene2"),
-#'   filter_OS_time = FALSE,
-#'   meta_time = "m",
-#'   cor = TRUE,
-#'   fold = 5,
-#'   rep = 10,
-#'   seed = 123
-#' )
-#' }
 ML.survival.model = function(train_data,
                        candidate_genes,
                        filter_OS_time=F,
@@ -85,7 +74,7 @@ ML.survival.model = function(train_data,
   train_data<-train_data[,common_feature]
 
   # higly correlated genes
-  if(cor==T){
+  if(cor){
       ###correlation
       data<-train_data
       cor_matrix <- cor(data[,-c(1:3)])
@@ -151,7 +140,7 @@ ML.survival.model = function(train_data,
     # Set up parallel backend using `future`
     if (.Platform$OS.type == "unix") {
       # Unix: Mac/Linux
-      future::plan(future.multicore::multicore, workers = ncore)
+      future::plan(future::multicore, workers = ncore)
     } else {
       # Windows
       future::plan(future::multisession, workers = ncore)
@@ -197,14 +186,15 @@ ML.survival.model = function(train_data,
 
     # the main function-----------------------------------
     # Parallel grid search over hyperparameters
-    results <- future::future_lapply(1:nrow(param_grid), function(i) {
+    results <- future.apply::future_lapply(1:nrow(param_grid), function(i) {
 
       # Get current parameters
       params <- param_grid[i, ]
       output_list <- list()  # Collect results for each repetition
+      display_progress(index = i, totalN = nrow(param_grid))
 
       # Parallelize the repetitions loop
-      output_list <- future::future_lapply(1:rep, function(j) {
+      output_list <- future.apply::future_lapply(1:rep, function(j) {
         tryCatch({
           folds <- folds_list[[j]]
           model_list <- vector("list", length = fold)
@@ -330,7 +320,7 @@ ML.survival.model = function(train_data,
     ## --------------
     for (j in 1:totalN) {
       print(j)
-      display.progress(j,totalN)
+      display_progress(j,totalN)
 
       test_index<-folds_list[[j]]
       train_index <- setdiff(seq_len(nrow(d.train)),test_index)
@@ -477,6 +467,7 @@ ML.survival.model = function(train_data,
     model_list<-list()
     for (j in 1:totalN) {
       print(j)
+      display_progress(index = j, totalN = totalN)
       test_index<-folds_list[[j]]
       train_index <- setdiff(seq_len(nrow(d.train)), test_index)
 
@@ -972,17 +963,17 @@ ML.survival.model = function(train_data,
       set.seed(seed)
       fit <-mboost::blackboost(Surv(time, status) ~ .,
                         data = train_fold,
-                        family = CoxPH(),
-                        control = boost_control(mstop = 500))
+                        family = mboost::CoxPH(),
+                        control = mboost::boost_control(mstop = 500))
 
-      cv <- mboost::cv(model.weights(fit), type = "kfold")
+      cv <- mboost::cv(stats::model.weights(fit), type = "kfold")
       cvm <- mboost::cvrisk(fit, folds = cv, papply = lapply)
-      n=mstop(cvm)
+      n=mboost::mstop(cvm)
       set.seed(seed)
       final.fit <- mboost::blackboost(Surv(time, status) ~ .,
                               data=train_fold,
-                              family = CoxPH(),
-                              control=boost_control(mstop = n))
+                              family = mboost::CoxPH(),
+                              control=mboost::boost_control(mstop = n))
 
       model_name="BlackBoost"
       model <- list(
@@ -1000,7 +991,7 @@ ML.survival.model = function(train_data,
     totalN=fold*2
     model_list<-list()
     for (j in 1:totalN) {
-
+      display_progress(index = j, totalN = totalN)
       test_index<-folds_list[[j]]
       train_index <- setdiff(seq_len(nrow(d.train)), test_index)
 
@@ -1052,7 +1043,7 @@ ML.survival.model = function(train_data,
       ###
       if(params$layer==1){
         ##1 layer
-        set_seed(seed)
+        survivalmodels::set_seed(seed)
         fit =survivalmodels::deephit(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
@@ -1064,7 +1055,7 @@ ML.survival.model = function(train_data,
                       batch_size = params$batch)
       } else if(params$layer==2){
         ##2 layer
-        set_seed(seed)
+        survivalmodels::set_seed(seed)
         fit = survivalmodels::deephit(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
@@ -1076,7 +1067,7 @@ ML.survival.model = function(train_data,
                       batch_size = params$batch)
       } else if(params$layer==3){
         ##3 layer
-        set_seed(seed)
+        survivalmodels::set_seed(seed)
         fit = survivalmodels::deephit(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
@@ -1088,7 +1079,7 @@ ML.survival.model = function(train_data,
                       batch_size = params$batch)
       } else if(params$layer==4){
         ##4 layer
-        set_seed(seed)
+        survivalmodels::set_seed(seed)
         fit = survivalmodels::deephit(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
@@ -1120,7 +1111,7 @@ ML.survival.model = function(train_data,
       best_param<-c()
 
       for(i in 1:nrow(param_grid)){
-        display.progress(index = i, totalN = nrow(param_grid))
+        display_progress(index = i, totalN = nrow(param_grid))
 
         params <- param_grid[i, ]
         model_list<-list()
@@ -1236,7 +1227,7 @@ ML.survival.model = function(train_data,
       ###
       if(params$layer==1){
         ##1 layer
-        set_seed(seed)
+        survivalmodels::set_seed(seed)
         fit =survivalmodels::deepsurv(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
@@ -1248,7 +1239,7 @@ ML.survival.model = function(train_data,
                       batch_size = params$batch)
       } else if(params$layer==2){
         ##2 layer
-        set_seed(seed)
+        survivalmodels::set_seed(seed)
         fit = survivalmodels::deepsurv(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
@@ -1260,7 +1251,7 @@ ML.survival.model = function(train_data,
                       batch_size = params$batch)
       } else if(params$layer==3){
         ##3 layer
-        set_seed(seed)
+        survivalmodels::set_seed(seed)
         fit = survivalmodels::deepsurv(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
@@ -1272,7 +1263,7 @@ ML.survival.model = function(train_data,
                       batch_size = params$batch)
       } else if(params$layer==4){
         ##4 layer
-        set_seed(seed)
+        survivalmodels::set_seed(seed)
         fit = survivalmodels::deepsurv(Surv(time, status) ~ .,
                       data = train_fold,
                       frac = 0.2,
@@ -1303,7 +1294,7 @@ ML.survival.model = function(train_data,
       best_param<-c()
 
       for(i in 1:nrow(param_grid)){
-        display.progress(index = i, totalN = nrow(param_grid))
+        display_progress(index = i, totalN = nrow(param_grid))
         params <- param_grid[i, ]
         model_list<-list()
 
@@ -1394,112 +1385,184 @@ ML.survival.model = function(train_data,
     # Set up parallel backend using `future`
     if (.Platform$OS.type == "unix") {
       # Unix: Mac/Linux
-      future::plan(future.multicore::multicore, workers = ncore)
+      future::plan(future::multicore, workers = ncore)
     } else {
       # Windows
       future::plan(future::multisession, workers = ncore)
     }
-    ## define param grid
-    param_grid <- expand.grid(interaction.depth = c(1,3,5,7,9),
-                              shrinkage = c(0.001, 0.01, 0.1),
-                              n.minobsinnode = c(1,5,10,15))
+
     ## create folds
     folds_list<- create_folds(d.train,fold=fold,nrepeats = 1,strata="status",seed)
 
-    ## the modeling function----------------------------------------------
-
-    gbm_cox<-function(train_fold,valid_fold,test_fold,fold,params,seed,ncore){
-      set.seed(seed)
-      fit <-gbm::gbm(Surv(time, status) ~ .,
-                 data = train_fold,
-                 distribution = "coxph",
-                 n.trees = 10000,
-                 interaction.depth = params$interaction.depth,
-                 shrinkage = params$shrinkage,
-                 n.minobsinnode = params$n.minobsinnode,
-                 cv.folds = fold,
-                 keep.data = FALSE,
-                 verbose = FALSE,
-                 n.cores = ncore)
-      best.iter <- which.min(fit$cv.error)
-
-      model_name="GBM"
-      # result
-      model <- list(
-        best_param =  list(params,best.iter),
-        model = fit,
-        train = cal_metrics(train_fold, fit, model_name),
-        valid = cal_metrics(valid_fold, fit, model_name),
-        test = cal_metrics(test_fold, fit, model_name)
-      )
-      return(model)
-    }
-
     # Save results in a list for efficiency
-    results <- data.frame()
+    hyper_grid <- expand.grid(
+      learning_rate = c(0.3, 0.1, 0.05, 0.01, 0.005),
+      RMSE=NA,
+      cindex = NA,
+      bs=NA
+    )
 
-    # searching the grid-------------------------------------------------
-    print("Searching the grid")
+    # execute grid search in learning rate
+    for(i in seq_len(nrow(hyper_grid))) {
+      results<-data.frame()
+      lr=hyper_grid$learning_rate[i]
+      result<-future.apply::future_lapply(
+        1:fold,function(j,d.train,d.test,fold,lr,seed,ncore){
 
-    # Set up parallel backend using `future`
-    if (.Platform$OS.type == "unix") {
-      # Unix: Mac/Linux
-      future::plan(future.multicore::multicore, workers = ncore)
-    } else {
-      # Windows
-      future::plan(future::multisession, workers = ncore)
-    }
-
-    for(i in c(1:nrow(param_grid))) {
-      print(i)
-      params <- param_grid[i, ]
-      display.progress(index = i, totalN = nrow(param_grid))
-      model_list<-list()
-      # Parallelize the repetitions loop
-
-      model_list<-future::future_lapply(1:fold, function(j) {
-        tryCatch({
-          test_index<-folds_list[[1]][[j]]
+          test_index <- folds_list[[1]][[j]]
           train_index <- setdiff(seq_len(nrow(d.train)), test_index)
 
-          train_fold <- d.train[train_index,]
-          valid_fold <- d.train[test_index,]
+          train_fold=d.train[train_index, ]
+          valid_fold=d.train[test_index, ]
 
-          ## train data
-          model_list[[j]]<-gbm_cox(train_fold,valid_fold,d.test,fold,params,seed,ncore)
-        }, error = function(e) {
-          # Catch errors and log them without stopping the loop
-          paste("Error in parameter set repeat", j, ":", e$message)
-          return(data.frame(NA, NA, NA, NA, NA, NA, NA, NA))  # Return NA for error cases
-        })
-      }, future.seed = seed)
+          # fit gbm
+          set.seed(seed)  # for reproducibility
+          fit <- gbm::gbm(
+            formula =Surv(time, status) ~ .,
+            data = train_fold,
+            distribution = "coxph",
+            n.trees = 5000,
+            interaction.depth = 3,
+            shrinkage =lr,
+            n.minobsinnode = 10,
+            cv.folds = fold,
+            keep.data = FALSE,
+            verbose = FALSE,
+            n.cores = ncore)
 
-      # Calculate cindex and bs score
-      index_list <- extract_metrics(model_list)
+          best.iter <- which.min(fit$cv.error)
 
-      # Return results for this parameter set
-      results<-rbind(results,data.frame(
-        interaction.depth = params$interaction.depth,
-        shrinkage = params$shrinkage,
-        n.minobsinnode = params$n.minobsinnode,
-        cindex_tr = mean(index_list$train$cindex,na.rm=T),
-        bs_tr = mean(index_list$train$bs,na.rm=T),
-        cindex_tv = mean(index_list$valid$cindex,na.rm=T),
-        bs_tv = mean(index_list$valid$bs,na.rm=T)))
+          valid = cal_metrics(valid_fold, fit,"GBM")
 
+          list(
+            trees=  best.iter,
+            RMSE = sqrt(min(fit$cv.error)),
+            cindex = valid$cindex,
+            bs = valid$bs)
+
+        },
+        future.seed = seed,
+        d.train = d.train,
+        d.test = d.test,
+        fold = fold,
+        lr=lr,
+        seed = seed,
+        ncore=ncore)
+
+      results<-do.call(rbind,lapply(result,function(x){
+        data.frame(lr=hyper_grid$learning_rate[i],
+                   trees=x$trees,
+                   RMSE=x$RMSE,
+                   cindex=x$cindex,
+                   bs=x$bs)
+      }))
+      # add SSE, trees, and training time to results
+      hyper_grid$RMSE[i]  <- mean(results$RMSE)
+      hyper_grid$bs[i]  <- mean(results$bs)
+      hyper_grid$cindex[i]<-mean(results$cindex)
     }
 
+    best_lr<-hyper_grid[which.max(hyper_grid$cindex),]$learning_rate
+    print(paste0("The best learning rate is ",best_lr))
+
+    # search grid in depth and n.minobsinnode
+    hyper_grid <- expand.grid(
+      j=seq_len(fold),
+      n.trees = 5000,
+      shrinkage = best_lr,
+      interaction.depth = c(1,3, 5, 7),
+      n.minobsinnode = c(5, 10, 15)
+    )
+
+    ## the modeling function----------------------------------------------
+    model_fit<-function(j,n.trees,shrinkage,interaction.depth,n.minobsinnode){
+
+      # split raw data into training and validation data
+      test_index <- folds_list[[1]][[j]]
+      train_index <- setdiff(seq_len(nrow(d.train)), test_index)
+      train_fold <- d.train[train_index, ]
+      valid_fold <- d.train[test_index, ]
+
+      # gbm modeling
+      set.seed(seed) # for reproducibility
+      fit <-gbm::gbm(Surv(time, status) ~ .,
+                     data = train_fold,
+                     distribution = "coxph",
+                     n.trees = n.trees,
+                     interaction.depth = interaction.depth,
+                     shrinkage = shrinkage,
+                     n.minobsinnode = n.minobsinnode,
+                     cv.folds = fold,
+                     keep.data = FALSE,
+                     verbose = FALSE,
+                     n.cores = ncore)
+      best.iter <- which.min(fit$cv.error)
+      valid = cal_metrics(valid_fold,fit,"GBM")
+
+      # result
+      cindex = valid$cindex
+    }
+
+    # perform search grid with functional programming
+    hyper_grid$cindex <- purrr::pmap_dbl(
+      hyper_grid,
+      ~ model_fit(
+        j= ..1,
+        n.trees = ..2,
+        shrinkage = ..3,
+        interaction.depth = ..4,
+        n.minobsinnode = ..5
+      )
+    )
+
+    result <- hyper_grid %>%
+      dplyr::group_by(.data$interaction.depth, .data$n.minobsinnode) %>%
+      dplyr::summarise(mean_cindex = mean(.data$cindex), .groups = 'drop') %>%
+      dplyr::arrange(desc(.data$mean_cindex))
+
+    best_param <-as.data.frame(result[which.max(result$mean_cindex), ])
+
     # best parameter
-    best_param <- results[which.max(results$cindex_tv),][1:3]
+    message("\nOptimal Parameters Identified:")
     print(best_param)
 
-    ###
+    # performance evaluation of best params in repetation
     set.seed(seed)
     folds_list<- create_folds(d.train,fold=fold,nrepeats = 2,strata="status",seed=seed)
     folds_list<-c(folds_list[[1]],folds_list[[2]])
-    ##
     totalN=fold*2
+    ## saving result
     model_list<-list()
+
+    ## the modeling function----------------------------------------------
+    gbm_cox<-function(train_fold,valid_fold,test_fold,fold,params,seed,ncore){
+      set.seed(seed)
+      fit <-gbm::gbm(Surv(time, status) ~ .,
+                     data = train_fold,
+                     distribution = "coxph",
+                     n.trees = 5000,
+                     interaction.depth = params$interaction.depth,
+                     shrinkage = best_lr,
+                     n.minobsinnode = params$n.minobsinnode,
+                     cv.folds = fold,
+                     keep.data = FALSE,
+                     verbose = FALSE,
+                     n.cores = ncore)
+      best.iter <- which.min(fit$cv.error)
+
+      # result
+      model <- list(
+        best_param =  list(interaction.depth=params$interaction.depth,
+                           ntrees=best.iter,
+                           shrinkage = best_lr,
+                           n.minobsinnode = params$n.minobsinnode),
+        model = fit,
+        train = cal_metrics(train_fold, fit, "GBM"),
+        valid = cal_metrics(valid_fold, fit,"GBM"),
+        test = cal_metrics(test_fold, fit, "GBM")
+      )
+      return(model)
+    }
     for (j in 1:totalN) {
       print(j)
       test_index<-folds_list[[j]]
@@ -1514,8 +1577,7 @@ ML.survival.model = function(train_data,
     }
 
     ###total data model
-    final_model<-gbm_cox(d.train,d.test,NULL,fold,
-                         best_param,seed,ncore)
+    final_model<-gbm_cox(d.train,d.test,NULL,fold,best_param,seed,ncore)
 
     metrics_list<-extract_metrics(model_list)
 
@@ -1527,7 +1589,6 @@ ML.survival.model = function(train_data,
     save("final_model", file = paste0(outdir,"/",sprintf("%d_%d_final_GBM_result.RData",rep,fold)))
     save("metrics_list", file = paste0(outdir,"/",sprintf("%d_%d_GBM_cindex_result.RData",rep,fold)))
     return(list(final_model=final_model,metrics_list=metrics_list))
-
   }
 
   glm_model<-function(d.train,d.test,fold,rep,outdir,seed,ncore){
@@ -1535,7 +1596,7 @@ ML.survival.model = function(train_data,
     # Set up parallel backend using `future`
     if (.Platform$OS.type == "unix") {
       # Unix: Mac/Linux
-      future::plan(future.multicore::multicore, workers = ncore)
+      future::plan(future::multicore, workers = ncore)
     } else {
       # Windows
       future::plan(future::multisession, workers = ncore)
@@ -1549,17 +1610,17 @@ ML.survival.model = function(train_data,
       set.seed(seed)
       fit <-mboost::glmboost(Surv(time, status) ~.,
                       data = train_fold,
-                      family = CoxPH(),
-                      control = boost_control(mstop=2000,
+                      family = mboost::CoxPH(),
+                      control = mboost::boost_control(mstop=2000,
                                               nu=params),
                       center = FALSE)
       cv10f <- mboost::cv(model.weights(fit), type = "kfold")
       cvm <- mboost::cvrisk(fit, folds = cv10f, papply = lapply)
-      n=mstop(cvm)
+      n=mboost::mstop(cvm)
       final.fit <- mboost::glmboost(Surv(time, status) ~.,
                             data = train_fold,
-                            family = CoxPH(),
-                            control=boost_control(mstop =n,
+                            family = mboost::CoxPH(),
+                            control=mboost::boost_control(mstop =n,
                                                   nu=params),
                             center = FALSE)
 
@@ -1583,14 +1644,12 @@ ML.survival.model = function(train_data,
 
     # searching the grid
     print("Searching the grid")
-    for (i in 1:nrow(param_grid)) {
-
+    for (i in 1:nrow(param_grid)){
       params<-param_grid[i,]
-      display.progress(index = i, totalN = nrow(param_grid))
+      display_progress(index = i, totalN = nrow(param_grid))
       model_list<-list()
-      model_list<-future::future_lapply(1:fold,function(j){
+      for(j in 1:fold){
         tryCatch({
-
           test_index<-folds_list[[1]][[j]]
           train_index <- setdiff(seq_len(nrow(d.train)), test_index)
 
@@ -1604,7 +1663,7 @@ ML.survival.model = function(train_data,
           paste("Error in parameter set repeat", j, ":", e$message)
           return(data.frame(NA, NA, NA, NA, NA, NA, NA, NA))  # Return NA for error cases
         })
-      }, future.seed = seed)
+      }
 
       index_list<-extract_metrics(model_list)
       ###

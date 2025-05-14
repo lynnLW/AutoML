@@ -11,10 +11,6 @@
 #'         - valid: Validation set metrics
 #'         - test: Test set metrics
 #' @export
-#' @examples
-#' \dontrun{
-#' cv_results <- extract_metrics(model_list = cv_models)
-#' }
 extract_metrics <- function(model_list, metric_names = NULL) {
   # Set default metrics if not specified
   if (is.null(metric_names)) {

@@ -26,13 +26,3 @@ survcomp::concordance.index object containing:
 \description{
 Computes the concordance index between predicted risk scores and observed survival times
 }
-\examples{
-\dontrun{
-data(train_data)
-cindex_result <- cal_cindex(
-  newdata = train_data,
-  model = trained_model,
-  model_name = "CoxBoost"
-)
-}
-}

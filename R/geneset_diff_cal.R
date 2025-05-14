@@ -10,6 +10,7 @@
 #' @param method Analysis method: "limma" for linear models or alternative statistical method (default: "limma")
 #' @param normalized Logical indicating whether to normalize expression data (default: TRUE)
 #' @param outdir Output directory path (default: "./")
+#' @importFrom dplyr %>% group_by summarise across
 #'
 #' @return Invisibly returns a list containing:
 #' \itemize{
@@ -19,25 +20,6 @@
 #'
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' # Using limma method
-#' result <- geneset_diff_cal(
-#'   gs.exp = expression_matrix,
-#'   grouping = sample_groups,
-#'   prefix = "analysis1",
-#'   geneset_name = "hallmark_apoptosis"
-#' )
-#'
-#' # Using t-test method
-#' result <- geneset_diff_cal(
-#'   gs.exp = expression_matrix,
-#'   grouping = sample_groups,
-#'   method = "t.test",
-#'   prefix = "analysis2",
-#'   geneset_name = "my_geneset"
-#' )
-#' }
 geneset_diff_cal <- function(gs.exp,
                              grouping,
                              prefix,
@@ -45,11 +27,6 @@ geneset_diff_cal <- function(gs.exp,
                              method=NULL,
                              normalized=T,
                              outdir="./"){
-  ## Load required packages
-  library(stringr)
-  library(dplyr)
-  library(limma)
-  library(ggpubr)
 
   ## Set default method parameter
   if (is.null(method)){
@@ -68,7 +45,7 @@ geneset_diff_cal <- function(gs.exp,
   group_info <- data.frame(row.names=grouping$accession, group=grouping$group)
   gs.exp <- gs.exp[row.names(group_info), , drop=FALSE]
 
-  #' Standardize dataframe column names to comply with R naming conventions
+  # Standardize dataframe column names to comply with R naming conventions
   clean_column_names <- function(df, replace_char = "_") {
 
     # Get original column names
@@ -123,21 +100,20 @@ geneset_diff_cal <- function(gs.exp,
       exp2 <- exp2
     }
 
-    design <- model.matrix(~0+groups)
+    design <- stats::model.matrix(~0+groups)
     colnames(design) = levels(factor(groups))
     rownames(design) = colnames(exp2)
     head(design)
 
     # Generate contrasts for all pairwise comparisons
-    pairwise_comparisons <- combn(unique(groups), 2, simplify = FALSE)
+    pairwise_comparisons <- utils::combn(unique(groups), 2, simplify = FALSE)
     for (i in 1:length(pairwise_comparisons)){
       contrasts <- paste0(pairwise_comparisons[[i]][1],"-",pairwise_comparisons[[i]][2])
-      compare <- makeContrasts(contrasts=contrasts, levels=design)
-      fit <- lmFit(exp2, design)
-      fit2 <- contrasts.fit(fit, compare)
-      fit3 <- eBayes(fit2)
-      Diff <- topTable(fit3, number=Inf)
-      head(Diff)
+      compare <- limma::makeContrasts(contrasts=contrasts, levels=design)
+      fit <- limma::lmFit(exp2, design)
+      fit2 <- limma::contrasts.fit(fit, compare)
+      fit3 <- limma::eBayes(fit2)
+      Diff <- limma::topTable(fit3, number=Inf)
 
       ## Save differential expression results
       write.table(Diff, file=paste0(prefix,"_",contrasts,"_diff_DEG.csv"), quote=F, sep=",")
@@ -153,19 +129,19 @@ geneset_diff_cal <- function(gs.exp,
 
     ## Calculate average expression by group
     mean_values <- exp2 %>%
-      group_by(group) %>%
+      group_by(.data$group) %>%
       summarise(across(all_of(genelist), mean))
     mean_values <- mean_values %>% t() %>% as.data.frame()
     names(mean_values) <- mean_values[1,]
     mean_values <- mean_values[-1,]
 
     ## Generate all possible group combinations
-    group_combinations <- combn(unique(exp2$group), 2, simplify = FALSE)
+    group_combinations <- utils::combn(unique(exp2$group), 2, simplify = FALSE)
 
     ## Function to calculate p-values for group comparisons
     calculate_pvalue_for_combination <- function(gene, groups) {
-      subset_data <- exp2 %>% filter(group %in% groups)
-      result <- compare_means(as.formula(paste(gene, "~ group")),
+      subset_data <- exp2 %>% filter(.data$group %in% groups)
+      result <- ggpubr::compare_means(stats::as.formula(paste(gene, "~ group")),
                               data = subset_data,
                               method = method)
       as.data.frame(result)
@@ -202,7 +178,7 @@ geneset_diff_cal <- function(gs.exp,
 
     ## Merge and save results
     static_table <- merge(mean_values, pvalues, by="row.names")
-    write.table(static_table,
+    utils::write.table(static_table,
                 file=paste0(outdir,"/",prefix,"_",geneset_name,"_mean_diff.csv"),
                 quote=F, sep=",", row.names = F)
   }

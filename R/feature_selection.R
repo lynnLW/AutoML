@@ -15,14 +15,13 @@
 #' @param outdir the outpt directory
 #' @param seed  The seed
 #' @param ncore multisession workers
+#' @import dplyr
+#' @import ggplot2
+#' @importFrom survival coxph Surv survdiff
+#' @importFrom stats pchisq coef na.exclude na.omit median
+#' @importFrom utils write.table
 #' @return feature list
 #' @export
-#' @examples
-#' \donttest{
-#' # Requires trained data and genelist
-#' data(train_data)
-#' selected.feature<-feature_selection(InputMatrix,genelist=genelist)
-#' }
 feature_selection<- function(InputMatrix,
                               genelist=NULL,
                               fold=5,
@@ -36,43 +35,8 @@ feature_selection<- function(InputMatrix,
                               outdir='1.feature_select/',
                               seed=123,
                               ncore=4
-                              ){
-  ### loading the packages ####
-
-  if (T) {
-    Biocductor_packages <- c(
-      "tidyverse",
-      "scales",
-      "future.apply",
-      "Hmisc",
-      "survival",
-      "randomForestSRC",
-      "glmnet",
-      "plsRcox",
-      "CoxBoost",
-      "survivalsvm",
-      "dplyr",
-      "tibble",
-      "BART",
-      "miscTools",
-      "compareC",
-      "tidyr",
-      "mixOmics",
-      "data.table",
-      "pbapply",
-      "e1071",
-      "Boruta",
-      "caret",
-      "xgboost",
-      "Ckmeans.1d.dp",
-      "Matrix",
-      "YSX"
-    )
-
-    lapply(Biocductor_packages, function(x) {
-      library(x,character.only = T)
-    })
-  }
+                              )
+{
 
   ## setting the parameters
   if (T) {
@@ -139,14 +103,14 @@ feature_selection<- function(InputMatrix,
     run_diff_gene<-function(input,genes,diff_pcutoff = 0.05,outdir){
       ###diff expression
       df_mean<- input %>%
-        group_by(OS_status)%>%
+        group_by(.data$OS_status)%>%
         summarise(across(everything(),\(x) mean(x, na.rm = TRUE)))%>%
         t() %>% as.data.frame()
       names(df_mean)<-df_mean[1,]
       df_mean<-df_mean[-1,]
       ###function calculate pvalue
       cal_pvalue<-function(input,gene){
-        pvalue<-pairwise.wilcox.test(input[,gene],
+        pvalue<-stats::pairwise.wilcox.test(input[,gene],
                                      input[,'OS_status'],
                                      p.adjust.method = "bonf")$p.value
         return(pvalue)
@@ -205,18 +169,12 @@ feature_selection<- function(InputMatrix,
                           inputSet,
                           unicox_pcutoff=0.05,
                           outdir){
-      ##display progress
-      display.progress <- function(index, totalN, breakN = 20) {
-        if (index %% ceiling(totalN / breakN) == 0) {
-          cat(paste(round(index * 100 / totalN), "% ", sep = ""))
-        }
-      }
 
       ######## unicox#######
       print("Stating the univariable cox regression")
       unicox <- data.frame()
       for (i in 1:ncol(inputSet[, 4:ncol(inputSet)])) {
-        display.progress(index = i, totalN = ncol(inputSet[, 4:ncol(inputSet)]))
+        display_progress(index = i, totalN = ncol(inputSet[, 4:ncol(inputSet)]))
         gene <- colnames(inputSet[, 4:ncol(inputSet)])[i]
         tmp <- data.frame(
           expr = as.numeric(inputSet[, 4:ncol(inputSet)][, i]),
@@ -247,7 +205,7 @@ feature_selection<- function(InputMatrix,
       } else{
         sunicox<-sunicox
       }
-      write.table(sunicox,file=paste0(outdir,"/2.unicox_",unicox_pcutoff,"_result.csv"),row.names = F, quote = F,sep=",")
+      utils::write.table(sunicox,file=paste0(outdir,"/2.unicox_",unicox_pcutoff,"_result.csv"),row.names = F, quote = F,sep=",")
 
       print("Finished the univariable cox regression")
       selgene <- sunicox$gene
@@ -263,17 +221,13 @@ feature_selection<- function(InputMatrix,
                          KM_pcutoff=0.05,
                          outdir
     ) {
-      display.progress <- function(index, totalN, breakN = 20) {
-        if (index %% ceiling(totalN / breakN) == 0) {
-          cat(paste(round(index * 100 / totalN), "% ", sep = ""))
-        }
-      }
+    
       ############### km selection#######
       print("Stating the KM survival")
 
       kmoutput <- NULL
       for (i in 1:ncol(inputSet[, 4:ncol(inputSet)])) {
-        display.progress(index = i, totalN = ncol(inputSet), breakN = 20)
+        display_progress(index = i, totalN = ncol(inputSet), breakN = 20)
         g <- colnames(inputSet[, 4:ncol(inputSet)])[i]
         tmp <- inputSet[, c("OS_time", "OS_status", g)]
         tmp$group <- ifelse(tmp[, 3] > median(tmp[, 3]), "High", "Low")
@@ -288,7 +242,7 @@ feature_selection<- function(InputMatrix,
 
       print("Finished the KM selection")
       skmoutput <- kmoutput[which(kmoutput$pvalue < KM_pcutoff),]
-      write.table(skmoutput,paste0(outdir,"/3.KM_",KM_pcutoff,"_result.csv"),row.names = F, quote = F,sep=",")
+      utils::write.table(skmoutput,paste0(outdir,"/3.KM_",KM_pcutoff,"_result.csv"),row.names = F, quote = F,sep=",")
       selgene <- kmoutput[which(kmoutput$pvalue < KM_pcutoff), "gene"]
       return(selgene)
     }
@@ -299,14 +253,14 @@ feature_selection<- function(InputMatrix,
     print("Performing the intersection between km and unicox method")
     geneset.op<-intersect(geneset.2,geneset.3)
     print(paste0("Gets ",length(geneset.op)," unicox and km gene with a pvalue <0.05"))
-    write.table(geneset.op,paste0(outdir,"/4.op_KM_unicox_gene.csv"),row.names = F, quote = F,sep=",")
+    utils::write.table(geneset.op,paste0(outdir,"/4.op_KM_unicox_gene.csv"),row.names = F, quote = F,sep=",")
 
     ####
     if(deg==T){
       print("Performing the intersection between km_unicox and diff method")
       candidate_genes<-intersect(geneset.op,candidate_genes)
       print(paste0("Gets ",length(candidate_genes)," km_unicox and diff gene with a pvalue <0.05"))
-      write.table(candidate_genes,paste0(outdir,"/5.op_unicox_KM_diff_gene.csv"),row.names = F, quote = F,sep=",")
+      utils::write.table(candidate_genes,paste0(outdir,"/5.op_unicox_KM_diff_gene.csv"),row.names = F, quote = F,sep=",")
     } else {
       candidate_genes<-geneset.op
     }
@@ -343,7 +297,7 @@ feature_selection<- function(InputMatrix,
 
     lasso_fea_list <- future.apply::future_lapply(list.of.seed, function(x) {
       set.seed(list.of.seed[x])
-      cvfit <- cv.glmnet(
+      cvfit <- glmnet::cv.glmnet(
         x = x1,
         y = x2,
         nfolds = fold,
@@ -383,7 +337,7 @@ feature_selection<- function(InputMatrix,
       method = c(rep("Lasso", length(genes))),
       selected.fea = genes
     )
-    write.table(result,file=paste0(outdir,"/1.lasso_select_features.csv"),sep=",",row.names = F)
+    utils::write.table(result,file=paste0(outdir,"/1.lasso_select_features.csv"),sep=",",row.names = F)
     selected.feature <- rbind(selected.feature,result)
     return(selected.feature)
   }
@@ -403,9 +357,6 @@ feature_selection<- function(InputMatrix,
     test.iter.times<-50
     ####
     message("--- 2.Enet  ---")
-    library(glmnet)
-    library(survival)
-    library(pbapply)
 
     x1 <- as.matrix(est_dd[, pre_var])
     x2 <- as.matrix(Surv(est_dd$OS_time, est_dd$OS_status))
@@ -426,15 +377,14 @@ feature_selection<- function(InputMatrix,
       list.of.seed <- 1:test.iter.times
       res_list  <- future.apply::future_lapply(list.of.seed, function(x) {
         set.seed(x)
-        cvfit <- cv.glmnet(
+        cvfit <- glmnet::cv.glmnet(
           x = x1,
           y = x2,
           nfolds = 10,
           alpha = alpha,
           family = "cox",
           maxit = 1000)
-        mean_cv_error <- mean(cvfit$cvm)
-        return(list(cv_error = mean_cv_error))
+        return(list(cv_error = mean(cvfit$cvm)))
       },future.seed=TRUE)
 
       # extract all cv errors
@@ -448,9 +398,9 @@ feature_selection<- function(InputMatrix,
         mean_cv_error = mean_cv_errors_list[[i]]
       )}))
     ###
-    jpeg(filename=paste0(outdir,"/2.enet_mean_cross_error_different_alpha.jpg"),
+    grDevices::jpeg(filename=paste0(outdir,"/2.enet_mean_cross_error_different_alpha.jpg"),
          res=600,width = 12,height = 10,units = "cm")
-    p <- ggplot(mean_cv_errors_df, aes(x = alpha, y = mean_cv_error,color = factor(alpha))) +
+    p <- ggplot(mean_cv_errors_df, aes(x = .data$alpha, y = .data$mean_cv_error,color = factor(alpha))) +
       geom_boxplot() +
       labs(title = "Mean Cross-Validation Errors for Different Alpha Values",
            x = "Alpha",
@@ -466,7 +416,7 @@ feature_selection<- function(InputMatrix,
       ) +
       scale_color_brewer(palette = "Set1")
     print(p)
-    dev.off()
+    grDevices::dev.off()
 
     ##select optimal alpha
     mean_cv_errors_sum_df <- do.call(rbind, lapply(1:length(alpha_values), function(i) {
@@ -488,7 +438,7 @@ feature_selection<- function(InputMatrix,
     list.of.seed <- 1:final.iter.times
     res_list <- future.apply::future_lapply(list.of.seed, function(x) {
       set.seed(x)
-      cvfit <- cv.glmnet(
+      cvfit <- glmnet::cv.glmnet(
         x = x1,
         y = x2,
         nfolds = fold,
@@ -515,7 +465,7 @@ feature_selection<- function(InputMatrix,
       method = c(rep(paste0("Enet","[alpha=",alpha,"]"), length(genes))),
       selected.fea = genes
     )
-    write.table(result,file=paste0(outdir,"/2.Enet_select_features.csv"),sep=",",row.names = F)
+    utils::write.table(result,file=paste0(outdir,"/2.Enet_select_features.csv"),sep=",",row.names = F)
     selected.feature <- rbind(selected.feature, result)
     return(selected.feature)
   }
@@ -541,7 +491,7 @@ feature_selection<- function(InputMatrix,
 
     lasso_fea_list <- future.apply::future_lapply(list.of.seed, function(x) {
       set.seed(list.of.seed[x])
-      cvfit <- cv.glmnet(
+      cvfit <- glmnet::cv.glmnet(
         x = x1,
         y = x2,
         nfolds = fold,
@@ -581,7 +531,7 @@ feature_selection<- function(InputMatrix,
       method = c(rep("Ridge", length(genes))),
       selected.fea = genes
     )
-    write.table(result,file=paste0(outdir,"/3.Ridge_select_features.csv"),sep=",",row.names = F)
+    utils::write.table(result,file=paste0(outdir,"/3.Ridge_select_features.csv"),sep=",",row.names = F)
     selected.feature <- rbind(selected.feature,result)
     return(selected.feature)
   }
@@ -607,8 +557,8 @@ feature_selection<- function(InputMatrix,
     boruta.variable.imp <- merge(imp, variableGrp, all.x = T)
 
     sortedVariable <- boruta.variable.imp %>%
-      group_by(Variable) %>%
-      summarise(median = median(Importance)) %>%
+      group_by(.data$Variable) %>%
+      summarise(median = median(.data$Importance)) %>%
       arrange(median)
     sortedVariable <- as.vector(sortedVariable$Variable)
 
@@ -625,7 +575,7 @@ feature_selection<- function(InputMatrix,
     ##### 4.Boruta ###########
     set.seed(seed)
     message("--- 4.Boruta  ---")
-    boruta <- Boruta(
+    boruta <- Boruta::Boruta(
       x = as.matrix(est_dd[,-c(1,2)]),
       y = as.factor(est_dd[, c(2)]),
       pValue = 0.01,
@@ -634,7 +584,7 @@ feature_selection<- function(InputMatrix,
     )
 
     # head(boruta.variable.imp)
-    boruta.finalVars <- data.frame(Item = getSelectedAttributes(boruta, withTentative = T), Type = "Boruta")
+    boruta.finalVars <- data.frame(Item = Boruta::getSelectedAttributes(boruta, withTentative = T), Type = "Boruta")
 
     result <- data.frame(
       method = c(rep("Boruta", length(boruta.finalVars$Item))),
@@ -642,7 +592,7 @@ feature_selection<- function(InputMatrix,
     )
 
     selected.feature <- rbind(selected.feature, result)
-    write.table(result,file=paste0(outdir,"/4.Boruta_select_features.csv"),sep=",",row.names = F)
+    utils::write.table(result,file=paste0(outdir,"/4.Boruta_select_features.csv"),sep=",",row.names = F)
     return(selected.feature)
   }
 
@@ -656,12 +606,12 @@ feature_selection<- function(InputMatrix,
     message("--- 5.CoxBoost  ---")
 
     set.seed(seed)
-    pen <- optimCoxBoostPenalty(est_dd[, "OS_time"], est_dd[, "OS_status"], as.matrix(est_dd[, -c(1, 2)]),
+    pen <-CoxBoost::optimCoxBoostPenalty(est_dd[, "OS_time"], est_dd[, "OS_status"], as.matrix(est_dd[, -c(1, 2)]),
                                 trace = TRUE, start.penalty = 500, parallel = F)
 
-    cv.res <- cv.CoxBoost(est_dd[, "OS_time"], est_dd[, "OS_status"], as.matrix(est_dd[, -c(1, 2)]),
+    cv.res <- CoxBoost::cv.CoxBoost(est_dd[, "OS_time"], est_dd[, "OS_status"], as.matrix(est_dd[, -c(1, 2)]),
                           maxstepno = 500, K = fold, type = "verweij", penalty = pen$penalty, parallel = F)
-    fit <- CoxBoost(est_dd[, "OS_time"], est_dd[, "OS_status"], as.matrix(est_dd[, -c(1, 2)]),
+    fit <- CoxBoost::CoxBoost(est_dd[, "OS_time"], est_dd[, "OS_status"], as.matrix(est_dd[, -c(1, 2)]),
                     stepno = cv.res$optimal.step, penalty = pen$penalty)
     rid <- as.data.frame(coef(fit))
     rid$id <- rownames(rid)
@@ -672,7 +622,7 @@ feature_selection<- function(InputMatrix,
     )
 
     selected.feature <- rbind(selected.feature, result)
-    write.table(result,file=paste0(outdir,"/5.Coxboost_select_features.csv"),sep=",",row.names = F)
+    utils::write.table(result,file=paste0(outdir,"/5.Coxboost_select_features.csv"),sep=",",row.names = F)
     return(selected.feature)
   }
 
@@ -683,12 +633,12 @@ feature_selection<- function(InputMatrix,
     ##### 6.RSF ###########
     message("--- 6.RSF  ---")
     set.seed(seed)
-    ns_res<-tune.nodesize(Surv(OS_time, OS_status) ~ ., est_dd)
+    ns_res<-randomForestSRC::tune.nodesize(Surv(OS_time, OS_status) ~ ., est_dd)
     ###
     nodesize=ns_res$nsize.opt
     print(paste0("The optimal nodesize is ",nodesize))
     set.seed(seed)
-    fit <- rfsrc(Surv(OS_time, OS_status) ~ .,
+    fit <-randomForestSRC::rfsrc(Surv(OS_time, OS_status) ~ .,
                  data = est_dd,
                  ntree = 1000, nodesize = nodesize,
                  splitrule = "logrank",
@@ -697,7 +647,7 @@ feature_selection<- function(InputMatrix,
                  forest = T,
                  seed = seed
     )
-    rid <- var.select(object = fit, conservative = "high")
+    rid <- randomForestSRC::var.select(object = fit, conservative = "high")
     rid <- rid$topvars
 
     result <- data.frame(
@@ -706,7 +656,7 @@ feature_selection<- function(InputMatrix,
     )
 
     selected.feature <- rbind(selected.feature, result)
-    write.table(result,file=paste0(outdir,"/6.RSF_select_features.csv"),sep=",",row.names = F)
+    utils::write.table(result,file=paste0(outdir,"/6.RSF_select_features.csv"),sep=",",row.names = F)
     return(selected.feature)
   }
 
@@ -721,19 +671,19 @@ feature_selection<- function(InputMatrix,
     message("--- rf-RFE  ---")
     est_dd$OS_status <- as.factor(est_dd$OS_status)
     set.seed(seed)
-    control <- rfeControl(functions = rfFuncs,
+    control <- caret::rfeControl(functions = caret::rfFuncs,
                           method = "repeatedcv",
                           number = fold,
                           repeats= 5)
     sizes <- c(1,2, 5, 10, 15,20,30,50,100)
     ###
     set.seed(seed)
-    rfe_results <- rfe(x = est_dd[, -c(1:2)],
+    rfe_results <- caret::rfe(x = est_dd[, -c(1:2)],
                        y = est_dd$OS_status,
                        sizes = sizes,
                        rfeControl = control)
     ###
-    selected_features <- predictors(rfe_results)
+    selected_features <- caret::predictors(rfe_results)
     ###
     result <- data.frame(
       method = c(rep("RF-RFE", length(selected_features))),
@@ -741,7 +691,7 @@ feature_selection<- function(InputMatrix,
     )
 
     selected.feature <- rbind(selected.feature, result)
-    write.table(result,file=paste0(outdir,"/7.RF-RFE_select_features.csv"),sep=",",row.names = F)
+    utils::write.table(result,file=paste0(outdir,"/7.RF-RFE_select_features.csv"),sep=",",row.names = F)
     return(selected.feature)
   }
 
@@ -756,7 +706,7 @@ feature_selection<- function(InputMatrix,
 
     for (direction in c("both", "backward", "forward")) {
       fit <- tryCatch(
-        stepAIC(coxph(Surv(OS_time, OS_status) ~ ., est_dd), direction = direction),
+        MASS::stepAIC(coxph(Surv(OS_time, OS_status) ~ ., est_dd), direction = direction),
         error = function(e) {
           message(paste("Error in direction:", direction, "-", e$message))
           return(NULL)
@@ -774,7 +724,7 @@ feature_selection<- function(InputMatrix,
     }
 
     selected.feature <- rbind(selected.feature, all_result)
-    write.table(all_result,file=paste0(outdir,"/8.stepcox_select_features.csv"),sep=",",row.names = F)
+    utils::write.table(all_result,file=paste0(outdir,"/8.stepcox_select_features.csv"),sep=",",row.names = F)
     return(selected.feature)
   }
 
@@ -787,15 +737,15 @@ feature_selection<- function(InputMatrix,
     message("--- 9.Xgboost  ---")
     set.seed(seed)
     train <- apply(est_dd[, -c(1)], 2, as.numeric) %>% as.data.frame()
-    train_matrix <- sparse.model.matrix(OS_status ~ . - 1, data = train)
+    train_matrix <-Matrix::sparse.model.matrix(OS_status ~ . - 1, data = train)
     train_label <- as.numeric(train$OS_status)
     train_fin <- list(data = train_matrix, label = train_label)
-    dtrain <- xgb.DMatrix(data = train_fin$data, label = train_fin$label)
-    xgb <- xgboost(
+    dtrain <- xgboost::xgb.DMatrix(data = train_fin$data, label = train_fin$label)
+    xgb <- xgboost::xgboost(
       data = dtrain, max_depth = 6, eta = 0.5,
       objective = "binary:logistic", nround = 25
     )
-    importance <- xgb.importance(train_matrix@Dimnames[[2]], model = xgb)
+    importance <- xgboost::xgb.importance(train_matrix@Dimnames[[2]], model = xgb)
     head(importance)
     importance$rel.imp <- importance$Gain / max(importance$Gain)
 
@@ -809,7 +759,7 @@ feature_selection<- function(InputMatrix,
     )
 
     selected.feature <- rbind(selected.feature, result)
-    write.table(result,file=paste0(outdir,"/9.xgboost_select_features.csv"),sep=",",row.names = F)
+    utils::write.table(result,file=paste0(outdir,"/9.xgboost_select_features.csv"),sep=",",row.names = F)
     return(selected.feature)
   }
 
@@ -833,9 +783,9 @@ feature_selection<- function(InputMatrix,
       cat("Scaling data...")
       X[, -1] <- scale(X[, -1])
       cat("Done!\n")
-      flush.console()
+      utils::flush.console()
 
-      pb <- txtProgressBar(1, n, 1, style = 3)
+      pb <- utils::txtProgressBar(1, n, 1, style = 3)
 
       i.surviving <- 1:n
       i.ranked <- n
@@ -879,9 +829,9 @@ feature_selection<- function(InputMatrix,
           n <- nfeat - ncut
 
           cat("Features halved from", nfeat, "to", n, "\n")
-          flush.console()
+          utils::flush.console()
 
-          pb <- txtProgressBar(1, n, 1, style = 3)
+          pb <- utils::txtProgressBar(1, n, 1, style = 3)
         } else {
           ncut <- 1
         }
@@ -891,8 +841,8 @@ feature_selection<- function(InputMatrix,
         i.ranked <- i.ranked - ncut
         i.surviving <- i.surviving[-ranking[1:ncut]]
 
-        setTxtProgressBar(pb, n - length(i.surviving))
-        flush.console()
+        utils::setTxtProgressBar(pb, n - length(i.surviving))
+        utils::flush.console()
       }
 
       close(pb)
@@ -905,7 +855,7 @@ feature_selection<- function(InputMatrix,
       train.data <- X
       if (!is.null(test.fold)) train.data <- X[-test.fold, ]
 
-      svmModel <- svm(train.data[, -1], train.data[, 1],
+      svmModel <- e1071::svm(train.data[, -1], train.data[, 1],
                       cost = 10, cachesize = 500,
                       scale = F, type = "C-classification", kernel = "linear"
       )
@@ -920,7 +870,7 @@ feature_selection<- function(InputMatrix,
       feature.name <- colnames(input[, -1])[featureID]
       features.ranked <- data.frame(FeatureName = feature.name, FeatureID = featureID, AvgRank = avg.rank)
       if (save == T) {
-        write.table(features.ranked, file = file, quote = F, row.names = F)
+        utils::write.table(features.ranked, file = file, quote = F, row.names = F)
       } else {
         features.ranked
       }
@@ -929,18 +879,18 @@ feature_selection<- function(InputMatrix,
   FeatSweep.wrap <- function(i, results, input) {
       # Wrapper to estimate generalization error across all hold-out folds, for a given number of top features
       svm.list <- lapply(results, function(x) {
-        e1071::tune(svm,
+        e1071::tune(e1071::svm,
                     train.x = input[x$train.data.ids, 1 + x$feature.ids[1:i]],
                     train.y = input[x$train.data.ids, 1],
                     validation.x = input[x$test.data.ids, 1 + x$feature.ids[1:i]],
                     validation.y = input[x$test.data.ids, 1],
                     # Optimize SVM hyperparamters
-                    ranges = e1071::tune(svm,
+                    ranges = e1071::tune(e1071::svm,
                                          train.x = input[x$train.data.ids, 1 + x$feature.ids[1:i]],
                                          train.y = input[x$train.data.ids, 1],
                                          ranges  = list(gamma = 2^(-12:0), cost = 2^(-6:6))
                     )$best.par,
-                    tunecontrol = tune.control(sampling = "fix")
+                    tunecontrol = e1071::tune.control(sampling = "fix")
         )$perf
       })
 
@@ -949,7 +899,7 @@ feature_selection<- function(InputMatrix,
     }
 
   ######### the main of the function ##########
-  plan(multisession, workers = ncore)
+  future::plan(future::multisession, workers = ncore)
   if (!is.na(seed) &
       identical(c("ID", "OS_time", "OS_status"), colnames(InputMatrix)[1:3]) &
       identical(c("ID", "OS_time", "OS_status"), common_feature[1:3]) &
@@ -1035,7 +985,7 @@ feature_selection<- function(InputMatrix,
             method = c(rep("SVM-REF", length(fea))),
             selected.fea = fea
           )
-          write.table(result,file=paste0(outdir,"/10.svm_select_features.csv"),sep=",",row.names = F)
+          utils::write.table(result,file=paste0(outdir,"/10.svm_select_features.csv"),sep=",",row.names = F)
           selected.feature <- rbind(selected.feature, result)
         }
 
@@ -1048,12 +998,12 @@ feature_selection<- function(InputMatrix,
           set.seed(seed)
           data<-est_dd[,-1]
           data$OS_status<-as.factor(data$OS_status)
-          boruta<-Boruta(OS_status ~.,data = data,doTrace=2,maxRuns = 1000,ntree=1000)
+          boruta<-Boruta::Boruta(OS_status ~.,data = data,doTrace=2,maxRuns = 1000,ntree=1000)
 
           print("plot the importance of feature")
           boruta.variable.imp <- boruta.imp(boruta)
           head(boruta.variable.imp)
-          p<-sp_boxplot(boruta.variable.imp, melted=T, xvariable = "Variable", yvariable = "Importance",
+          p<-YSX::sp_boxplot(boruta.variable.imp, melted=T, xvariable = "Variable", yvariable = "Importance",
                         legend_variable = "finalDecision",x_label = "",coordinate_flip=F,
                         title="Feature importance",
                         legend_variable_order = c("shadowMax", "shadowMean", "shadowMin", "Tentative","Confirmed"),
@@ -1061,7 +1011,7 @@ feature_selection<- function(InputMatrix,
 
           print(p)
           ggsave(p,filename = paste0(outdir,"/2.boruta_feature_importance.jpg"),dpi=600,units="cm",width=10,height =8,scale = 1.5)
-          write.table(boruta$finalDecision,file=paste0(outdir,"/2.boruta_finalDecision_feature.csv"),sep=",")
+          utils::write.table(boruta$finalDecision,file=paste0(outdir,"/2.boruta_finalDecision_feature.csv"),sep=",")
           result<-as.data.frame(boruta$finalDecision)
           result<-data.frame(gene=row.names(result),decision=result[,1])
           selected.feature<-result[result$decision=="Confirmed",]$gene

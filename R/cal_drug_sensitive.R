@@ -3,18 +3,9 @@ cal_drug_sensitive<-function(test.data,
                              TPM=T,
                              correct="standardize" #"eb" for array,standardize  for rnaseq
                              ){
-  #loading packages
-  library("oncoPredict")
-  library(data.table)
-  library(gtools)
-  library(reshape2)
-  library(ggpubr)
-  library(openxlsx)
 
-  if(F){
-    load("data/internal_drug_data.rdata")
-  }
-
+  file_path <- system.file("extdata", "internal_drug_data.rda", package = "AutoML")
+  internal_drug_data <- readRDS(file_path)
   ###
   if (database=="CTRP2" & TPM==T){
     training_data=internal_drug_data[['training_data']]$CTRP2_TPM_Expr
@@ -37,7 +28,7 @@ cal_drug_sensitive<-function(test.data,
     identical(rownames(drug_data),colnames(training_data))
   }
   ###
-  calcPhenotype(trainingExprData = training_data,
+  oncoPredict::calcPhenotype(trainingExprData = training_data,
                 trainingPtype = drug_data,
                 testExprData = as.matrix(test.data),
                 batchCorrect = correct,  #   "eb" for array,standardize  for rnaseq

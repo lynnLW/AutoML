@@ -10,16 +10,12 @@
 #' @param plot_type Visualization type ("boxplot", "forestplot", or "barplot")
 #' @param width Plot width in inches
 #' @param height Plot height in inches
+#' @importFrom dplyr mutate arrange desc left_join %>% summarise
+#' @importFrom stats sd median
+#' @importFrom ggpubr ggboxplot ggbarplot ggexport
+#' @import ggplot2
 #' @return ggplot object or list of plots
 #' @export
-#' @examples
-#' \dontrun{
-#' cindex_rank2(
-#'   model_list = cv_models,
-#'   order = "valid",
-#'   plot_type = "boxplot"
-#' )
-#' }
 cindex_rank2 <- function(index_list=NULL,
                          model_list=NULL,
                          order="valid", # train, valid, test
@@ -29,15 +25,6 @@ cindex_rank2 <- function(index_list=NULL,
                          width = 1900, # width of plot
                          height = 1700 # height of plot
 ){
-  library(ggplot2)
-  library(aplot)
-  library(ggpubr)
-  library(RColorBrewer)
-  library(dplyr)
-  library(forcats)
-  library(patchwork)
-  library(stringr)
-  library(tidyr)
 
   if (!dir.exists(outdir)){
       dir.create(outdir,recursive = T)
@@ -62,13 +49,13 @@ cindex_rank2 <- function(index_list=NULL,
           model_cindex_df<-rbind(model_cindex_df,df)
       }
       ##calculate the mean
-      write.table(model_cindex_df,file=paste0(outdir,"/rep10_index.csv"),sep=",")
+      utils::write.table(model_cindex_df,file=paste0(outdir,"/rep10_index.csv"),sep=",")
       mean_table <- model_cindex_df %>%
-        pivot_longer(cols = -model, names_to = "variable", values_to = "value") %>% # Convert to long format
-        group_by(model, variable) %>% # Group by model and variable
-        summarise(mean_value = mean(value, na.rm = TRUE), .groups = "drop") %>% # Calculate mean
-        pivot_wider(names_from = "variable", values_from = "mean_value") # Convert back to wide format
-      write.table(mean_table ,file=paste0(outdir,"/rep10_mean_index.csv"),sep=",")
+        tidytable::pivot_longer(cols = -.data$model, names_to = "variable", values_to = "value") %>% # Convert to long format
+        dplyr::group_by(.data$model, .data$variable) %>% # Group by model and variable
+        dplyr::summarise(mean_value = mean(.data$value, na.rm = TRUE), .groups = "drop") %>% # Calculate mean
+        tidytable::pivot_wider(names_from = "variable", values_from = "mean_value") # Convert back to wide format
+      utils::write.table(mean_table ,file=paste0(outdir,"/rep10_mean_index.csv"),sep=",")
       ###order
         if (order=="train"){
           mean_table<-mean_table[order(mean_table$train.cindex,decreasing = T),]
@@ -84,20 +71,21 @@ cindex_rank2 <- function(index_list=NULL,
                                           levels = mean_table$model)
         }
 
-      ### Function to calculate summary statistics for forest plot
-      calculate_summary_stats <- function(data, var) {
+      ## calculate statics for forestplot
+      calculate_summary_stats <- function(data, index) {
+        index_sym <- rlang::sym(index)
         data %>%
-          group_by(model) %>%
+          group_by(.data$model) %>%
           summarise(
-            mean_var = mean(get(var), na.rm = TRUE),
-            sd_var = sd(get(var), na.rm = TRUE),
-            n = n(),
-            se_var = sd_var / sqrt(n)
+            mean_index = mean(!!index_sym, na.rm = TRUE),
+            sd_index = ifelse(dplyr::n() == 1, 0, sd(!!index_sym, na.rm = TRUE)),
+            n = dplyr::n(),
+            se_index = .data$sd_index / ifelse(dplyr::n() == 1, 1, sqrt(.data$n))
           )
       }
 
       ###index plot
-      generate_box_plot <- function(model_cindex_df,var,label,outdir) {
+      generate_box_plot <- function(model_cindex_df,var,label,width,height,outdir) {
         p <- ggboxplot(model_cindex_df,
                          x = "model",
                          y = var,
@@ -117,7 +105,7 @@ cindex_rank2 <- function(index_list=NULL,
       }
 
       ###index plot
-      generate_bar_plot <- function(model_cindex_df,var,label,outdir) {
+      generate_bar_plot <- function(model_cindex_df,var,label,width,height,outdir) {
         # bar plot
         p<-ggbarplot(
           model_cindex_df,
@@ -146,15 +134,18 @@ cindex_rank2 <- function(index_list=NULL,
       }
 
       # Function to generate AUC plot
-      generate_forest_plot <- function(model_cindex_df, var, label,outdir) {
+      generate_forest_plot <- function(model_cindex_df, var, label,width,height,outdir) {
         df_summary <- calculate_summary_stats(model_cindex_df, var)
-        median_value <- median(df_summary$mean_var)
-        df_summary$model <- fct_rev(df_summary$model)
+        median_value <- median(df_summary$mean_index)
+        df_summary$model <- forcats::fct_rev(df_summary$model)
 
         colors <- model_col[1:length(unique(model_cindex_df$model))]
 
-        p<-ggplot(df_summary, aes(x = mean_var, y = model, color = model)) +
-          geom_errorbarh(aes(xmin = mean_var - se_var, xmax = mean_var + se_var),
+        p<-ggplot(df_summary, aes(x = .data$mean_index,
+                                  y = .data$model,
+                                  color = .data$model)) +
+          geom_errorbarh(aes(xmin = .data$mean_index - .data$se_index,
+                             xmax = .data$mean_index + .data$se_index),
                          height = 0.15, linewidth = 0.3, color = "dimgrey") +
           geom_vline(xintercept = median_value, linetype = "dashed", color = "red", linewidth = 0.5) +
           geom_point(size =3.5, color = colors) +
@@ -198,43 +189,43 @@ cindex_rank2 <- function(index_list=NULL,
       if(index=="all" && plot_type=="boxplot"){
         for (i in 1:(ncol(model_cindex_df)-1)){
           var=vars[i]
-          var.1=str_split(vars[i],"\\.")[[1]][2]
+          var.1=stringr::str_split(vars[i],"\\.")[[1]][2]
           label=extract_index_label(var.1)
-          generate_box_plot(model_cindex_df,var,label,outdir)
-          generate_forest_plot(model_cindex_df,var,label,outdir)
+          generate_box_plot(model_cindex_df,var,label,width,height,outdir)
+          generate_forest_plot(model_cindex_df,var,label,width,height,outdir)
         }
       } else if(index=="bs"){
           ids=vars[grep("bs",vars)]
           for(var in ids){
             if(plot_type=="boxplot"){
-              generate_box_plot(model_cindex_df,var,"Integrated Brier Score",outdir)
+              generate_box_plot(model_cindex_df,var,"Integrated Brier Score",width,height,outdir)
             } else if (plot_type=="forestplot"){
-              generate_forest_plot(model_cindex_df,var,"Integrated Brier Score",outdir)
+              generate_forest_plot(model_cindex_df,var,"Integrated Brier Score",width,height,outdir)
             } else if (plot_type=="barplot"){
-              generate_bar_plot(model_cindex_df,var,"Integrated Brier Score",outdir)
+              generate_bar_plot(model_cindex_df,var,"Integrated Brier Score",width,height,outdir)
             }
           }
       } else if(index=="auc"){
         ids=vars[grep("auc",vars)]
         for(var in ids){
-          y=str_split(var,"_",simplify=T)[3]
+          y=stringr::str_split(var,"_",simplify=T)[3]
           if(plot_type=="boxplot"){
-            generate_box_plot(model_cindex_df,var,paste0(y,"-year AUC"),outdir)
+            generate_box_plot(model_cindex_df,var,paste0(y,"-year AUC"),width,height,outdir)
           } else if (plot_type=="forestplot"){
-            generate_forest_plot(model_cindex_df,var,paste0(y,"-year AUC"),outdir)
+            generate_forest_plot(model_cindex_df,var,paste0(y,"-year AUC"),width,height,outdir)
           } else if (plot_type=="barplot"){
-            generate_bar_plot(model_cindex_df,var,paste0(y,"-year AUC"),outdir)
+            generate_bar_plot(model_cindex_df,var,paste0(y,"-year AUC"),width,height,outdir)
           }
         }
       } else if(index=="cindex"){
         ids=vars[grep("cindex",vars)]
         for(var in ids){
           if(plot_type=="boxplot"){
-            generate_box_plot(model_cindex_df,var,"C-index",outdir)
+            generate_box_plot(model_cindex_df,var,"C-index",width,height,outdir)
           } else if (plot_type=="forestplot"){
-            generate_forest_plot(model_cindex_df,var,"C-index",outdir)
+            generate_forest_plot(model_cindex_df,var,"C-index",width,height,outdir)
           } else if (plot_type=="barplot"){
-            generate_bar_plot(model_cindex_df,var,"C-index",outdir)
+            generate_bar_plot(model_cindex_df,var,"C-index",width,height,outdir)
           }
         }
       }

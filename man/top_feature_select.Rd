@@ -43,13 +43,3 @@ The final selected genes and saving plots
 \description{
 Identify Key Genes Through Feature Frequency Analysis and Visualization
 }
-\examples{
-\donttest{
-data("selected_feature")
-top_feature_select(
-  selected.feature = selected_feature,
-  nmethod = 7,
-  outdir = tempdir()
-)
-}
-}

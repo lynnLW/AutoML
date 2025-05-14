@@ -11,15 +11,7 @@ run_data_combine<-function(list_data_surv,
                   sets=NULL,
                   correct_method='none',
                   outdir="dataset/"){
-  ##loading packages
-  library(tinyarray)
-  library(FactoMineR)
-  library(factoextra)
-  library(sva)
-  library(dplyr)
-  library(stringr)
-  library(ggplot2)
-  library(cowplot)
+
   ##output directory
   if(!dir.exists(outdir)){
       dir.create(outdir,recursive = T)
@@ -78,28 +70,28 @@ run_data_combine<-function(list_data_surv,
   ##format batch info
   expr<-expr[meta_info$ID,]
   ##pca before combat
-  pre.pca <- PCA(expr,graph = FALSE)
-  fviz_pca_ind(pre.pca,
+  pre.pca <- FactoMineR::PCA(expr,graph = FALSE)
+  factoextra::fviz_pca_ind(pre.pca,
                geom= "point",
                col.ind = meta_info$batch,
                addEllipses = TRUE,
                legend.title="Cohort",
                ellipse.level=0.95)
   ##saving result
-  ggsave(filename =paste0(outdir,"/pca/pre_pca.jpg"),width = 4,height = 4,dpi=600)
+  ggplot2::ggsave(filename =paste0(outdir,"/pca/pre_pca.jpg"),width = 4,height = 4,dpi=600)
 
   if(correct_method=="sva"){
     print("Performing the combat process")
-    mod <- model.matrix(~as.factor(OS_status),data=meta_info)
-    combat_expr <- ComBat(dat = t(expr),batch = meta_info$batch,mod=mod)
-    combat.pca <- PCA(t(combat_expr),graph = FALSE)
-    fviz_pca_ind(combat.pca,
+    mod <- stats::model.matrix(~as.factor(OS_status),data=meta_info)
+    combat_expr <- sva::ComBat(dat = t(expr),batch = meta_info$batch,mod=mod)
+    combat.pca <- FactoMineR::PCA(t(combat_expr),graph = FALSE)
+    factoextra::fviz_pca_ind(combat.pca,
                  geom= "point",
                  col.ind = meta_info$batch,
                  addEllipses = TRUE,
                  ellipse.level=0.95,
                  legend.title="Batch")
-    ggsave(filename =paste0(outdir,"/pca/post_pca_sva.jpg"),
+    ggplot2::ggsave(filename =paste0(outdir,"/pca/post_pca_sva.jpg"),
            width = 4,height = 4,dpi=600)
 
     ##sperate the dataset
@@ -127,15 +119,15 @@ run_data_combine<-function(list_data_surv,
     ##format batch info
     combat_expr<-combat_expr[meta_info$ID,]
     ##pca before combat
-    post.pca <- PCA(combat_expr,graph = FALSE)
-    fviz_pca_ind(post.pca,
+    post.pca <- FactoMineR::PCA(combat_expr,graph = FALSE)
+    factoextra::fviz_pca_ind(post.pca,
                  geom= "point",
                  col.ind = meta_info$batch,
                  addEllipses = TRUE,
                  legend.title="Batch",
                  ellipse.level=0.95)
     ##saving result
-    ggsave(filename =paste0(outdir,"/pca/post_pca_scale.jpg"),width = 4,height = 4,dpi=600)
+    ggplot2::ggsave(filename =paste0(outdir,"/pca/post_pca_scale.jpg"),width = 4,height = 4,dpi=600)
   } else if (correct_method=="min_max"){
     print("Performing the min-max scale process")
     min_max_scale<- function(x) {
@@ -157,15 +149,15 @@ run_data_combine<-function(list_data_surv,
     ##format batch info
     combat_expr<-combat_expr[meta_info$ID,]
     ##pca before combat
-    post.pca <- PCA(combat_expr,graph = FALSE)
-    fviz_pca_ind(post.pca,
+    post.pca <- FactoMineR::PCA(combat_expr,graph = FALSE)
+    factoextra::fviz_pca_ind(post.pca,
                  geom= "point",
                  col.ind = meta_info$batch,
                  addEllipses = TRUE,
                  legend.title="Batch",
                  ellipse.level=0.95)
     ##saving result
-    ggsave(filename =paste0(outdir,"/pca/post_pca_min_max.jpg"),width = 4,height = 4,dpi=600)
+    ggplot2::ggsave(filename =paste0(outdir,"/pca/post_pca_min_max.jpg"),width = 4,height = 4,dpi=600)
 
   } else if (correct_method=="none") {
     print("Not performing the correct process")
