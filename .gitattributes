@@ -2,5 +2,5 @@ data/internal_drug_data.rdata filter=lfs diff=lfs merge=lfs -text
 inst/extdata/*.rda filter=lfs diff=lfs merge=lfs -text
 inst/extdata/*.rdata filter=lfs diff=lfs merge=lfs -text
 inst/extdata/internal_drug_data.rda filter=lfs diff=lfs merge=lfs -text
-inst/extdata/10_5_model_list.RData filter=lfs diff=lfs merge=lfs -text
 inst/extdata/model.list.rdata filter=lfs diff=lfs merge=lfs -text
+inst/extdata/10_5_model_list.RData filter=lfs diff=lfs merge=lfs -text
