@@ -10,6 +10,7 @@
 #' @param rep Number of repeats for cross-validation
 #' @param p Proportion of data for training (0-1), default 1
 #' @param deep Logical, use deep learning models (deepsurv/deephit)
+#' @param gbm_model Logical, use GBM models (memory consuming)
 #' @param outdir Output directory path
 #' @param seed Random seed
 #' @param ncore Number of CPU cores for parallelization
@@ -30,6 +31,7 @@ ML.survival.model = function(train_data,
                        rep=10,
                        p=1,
                        deep=F,
+                       gbm_model=F,
                        outdir="2.train/",
                        seed=123,
                        ncore=4
@@ -132,226 +134,6 @@ ML.survival.model = function(train_data,
   t1<-Sys.time()
 
   ## the supporting function--------------------------------------------------
-
-  gbm_model<-function(d.train,d.test,fold,rep,outdir,seed,ncore){
-
-    # Record start time
-    start_time <- Sys.time()
-
-    # Set up parallel backend using `future`
-    if (.Platform$OS.type == "unix") {
-      # Unix: Mac/Linux
-      future::plan(future::multicore, workers = ncore)
-    } else {
-      # Windows
-      future::plan(future::multisession, workers = ncore)
-    }
-
-    ## create folds
-    folds_list<- create_folds(d.train,fold=fold,nrepeats = 1,strata="status",seed)
-
-    # Save results in a list for efficiency
-    hyper_grid <- expand.grid(
-      learning_rate = c(0.3, 0.1, 0.05, 0.01, 0.005),
-      RMSE=NA,
-      cindex = NA,
-      bs=NA
-    )
-
-    # execute grid search in learning rate
-    for(i in seq_len(nrow(hyper_grid))) {
-      results<-data.frame()
-      lr=hyper_grid$learning_rate[i]
-      display_progress(i,nrow(hyper_grid))
-      result<-future.apply::future_lapply(
-        1:fold,function(j,d.train,d.test,fold,lr,seed,ncore){
-
-          test_index <- folds_list[[1]][[j]]
-          train_index <- setdiff(seq_len(nrow(d.train)), test_index)
-
-          train_fold=d.train[train_index, ]
-          valid_fold=d.train[test_index, ]
-
-          # fit gbm
-          set.seed(seed)  # for reproducibility
-          fit <- gbm::gbm(
-            formula =Surv(time, status) ~ .,
-            data = train_fold,
-            distribution = "coxph",
-            n.trees = 5000,
-            interaction.depth = 3,
-            shrinkage =lr,
-            n.minobsinnode = 10,
-            cv.folds = fold,
-            keep.data = FALSE,
-            verbose = FALSE,
-            n.cores = ncore)
-
-          best.iter <- which.min(fit$cv.error)
-
-          valid = cal_metrics(valid_fold, fit,"GBM")
-
-          list(
-            trees=  best.iter,
-            RMSE = sqrt(min(fit$cv.error)),
-            cindex = valid$cindex,
-            bs = valid$bs)
-
-        },
-        future.seed = seed,
-        d.train = d.train,
-        d.test = d.test,
-        fold = fold,
-        lr=lr,
-        seed = seed,
-        ncore=ncore)
-
-      results<-do.call(rbind,lapply(result,function(x){
-        data.frame(lr=hyper_grid$learning_rate[i],
-                   trees=x$trees,
-                   RMSE=x$RMSE,
-                   cindex=x$cindex,
-                   bs=x$bs)
-      }))
-      # add SSE, trees, and training time to results
-      hyper_grid$RMSE[i]  <- mean(results$RMSE)
-      hyper_grid$bs[i]  <- mean(results$bs)
-      hyper_grid$cindex[i]<-mean(results$cindex)
-    }
-
-    best_lr<-hyper_grid[which.max(hyper_grid$cindex),]$learning_rate
-    print(paste0("The best learning rate is ",best_lr))
-
-    # search grid in depth and n.minobsinnode
-    hyper_grid <- expand.grid(
-      j=seq_len(fold),
-      n.trees = 5000,
-      shrinkage = best_lr,
-      interaction.depth = c(1,3, 5, 7),
-      n.minobsinnode = c(5, 10, 15)
-    )
-
-    ## the modeling function----------------------------------------------
-    model_fit<-function(j,n.trees,shrinkage,interaction.depth,n.minobsinnode){
-
-      # split raw data into training and validation data
-      test_index <- folds_list[[1]][[j]]
-      train_index <- setdiff(seq_len(nrow(d.train)), test_index)
-      train_fold <- d.train[train_index, ]
-      valid_fold <- d.train[test_index, ]
-
-      # gbm modeling
-      set.seed(seed) # for reproducibility
-      fit <-gbm::gbm(Surv(time, status) ~ .,
-                     data = train_fold,
-                     distribution = "coxph",
-                     n.trees = n.trees,
-                     interaction.depth = interaction.depth,
-                     shrinkage = shrinkage,
-                     n.minobsinnode = n.minobsinnode,
-                     cv.folds = fold,
-                     keep.data = FALSE,
-                     verbose = FALSE,
-                     n.cores = ncore)
-      best.iter <- which.min(fit$cv.error)
-      valid = cal_metrics(valid_fold,fit,"GBM")
-
-      # result
-      cindex = valid$cindex
-    }
-
-    # perform search grid with functional programming
-    hyper_grid$cindex <- purrr::pmap_dbl(
-      hyper_grid,
-      ~ model_fit(
-        j= ..1,
-        n.trees = ..2,
-        shrinkage = ..3,
-        interaction.depth = ..4,
-        n.minobsinnode = ..5
-      )
-    )
-
-    result <- hyper_grid %>%
-      dplyr::group_by(.data$interaction.depth, .data$n.minobsinnode) %>%
-      dplyr::summarise(mean_cindex = mean(.data$cindex), .groups = 'drop') %>%
-      dplyr::arrange(desc(.data$mean_cindex))
-
-    best_param <-as.data.frame(result[which.max(result$mean_cindex), ])
-
-    # best parameter
-    message("\nOptimal Parameters Identified:")
-    print(best_param)
-
-    # performance evaluation of best params in repetation
-    set.seed(seed)
-    folds_list<- create_folds(d.train,fold=fold,nrepeats = 2,strata="status",seed=seed)
-    folds_list<-c(folds_list[[1]],folds_list[[2]])
-    totalN=fold*2
-    ## saving result
-    model_list<-list()
-
-    ## the modeling function----------------------------------------------
-    gbm_cox<-function(train_fold,valid_fold,test_fold,fold,params,seed,ncore){
-      set.seed(seed)
-      fit <-gbm::gbm(Surv(time, status) ~ .,
-                     data = train_fold,
-                     distribution = "coxph",
-                     n.trees = 5000,
-                     interaction.depth = params$interaction.depth,
-                     shrinkage = best_lr,
-                     n.minobsinnode = params$n.minobsinnode,
-                     cv.folds = fold,
-                     keep.data = FALSE,
-                     verbose = FALSE,
-                     n.cores = ncore)
-      best.iter <- which.min(fit$cv.error)
-
-      # result
-      model <- list(
-        best_param =  list(interaction.depth=params$interaction.depth,
-                           ntrees=best.iter,
-                           shrinkage = best_lr,
-                           n.minobsinnode = params$n.minobsinnode),
-        model = fit,
-        train = cal_metrics(train_fold, fit, "GBM"),
-        valid = cal_metrics(valid_fold, fit,"GBM"),
-        test = cal_metrics(test_fold, fit, "GBM")
-      )
-      return(model)
-    }
-    for (j in 1:totalN) {
-      print(j)
-      test_index<-folds_list[[j]]
-      train_index <- setdiff(seq_len(nrow(d.train)), test_index)
-
-      train_fold <- d.train[train_index, ]
-      valid_fold <- d.train[test_index, ]
-
-      ## train data
-      model_list[[j]]<-gbm_cox(train_fold,valid_fold,d.test,fold,best_param,seed=seed,ncore)
-
-    }
-
-    ###total data model
-    final_model<-gbm_cox(d.train,d.test,NULL,fold,best_param,seed,ncore)
-
-    metrics_list<-extract_metrics(model_list)
-
-    end_time<-Sys.time()
-    run_time<-end_time-start_time
-    print(run_time)
-
-    future::plan(future::sequential)
-
-    save("model_list", file = paste0(outdir,"/",sprintf("%d_%d_GBM_result.RData",rep,fold)))
-    save("final_model", file = paste0(outdir,"/",sprintf("%d_%d_final_GBM_result.RData",rep,fold)))
-    save("metrics_list", file = paste0(outdir,"/",sprintf("%d_%d_GBM_cindex_result.RData",rep,fold)))
-
-    rm(hyper_grid,model_list)
-    gc()
-    return(list(final_model=final_model,metrics_list=metrics_list))
-  }
 
   rfrsf_model<-function(d.train,d.test,fold,rep,outdir,seed,ncore){
 
@@ -1352,6 +1134,234 @@ ML.survival.model = function(train_data,
 
   }
 
+  gbm_model<-function(d.train,d.test,fold,rep,outdir,seed){
+
+    # Record start time
+    start_time <- Sys.time()
+
+    ## create folds
+    folds_list<- create_folds(d.train,fold=fold,nrepeats = 1,strata="status",seed)
+
+    # execute grid search in learning rate
+    learning_rate = c(0.3, 0.1, 0.05, 0.01, 0.005)
+
+    best_lr=0
+    best_cindex=0
+
+    for(i in seq_len(length(learning_rate))) {
+
+      lr=learning_rate[i]
+      print(lr)
+      display_progress(i,length(learning_rate))
+      result<-c()
+
+      result <- foreach(j = 1:fold, .packages = c("gbm", "survival")) %dopar% {
+
+        test_index <- folds_list[[1]][[j]]
+        train_index <- setdiff(seq_len(nrow(d.train)), test_index)
+
+        # fit gbm
+        set.seed(seed)  # for reproducibility
+        fit <- gbm::gbm(
+          formula =survival::Surv(time, status) ~ .,
+          data = d.train[train_index, ],
+          distribution = "coxph",
+          n.trees = 1000,
+          interaction.depth = 3,
+          shrinkage =lr,
+          n.minobsinnode = 10,
+          cv.folds = fold,
+          keep.data = FALSE,
+          verbose = FALSE,
+          n.cores = 1)
+
+        return(cal_metrics(valid_fold, fit,"GBM")$cindex)
+      }
+
+      mean_index<-mean(unlist(result))
+
+      if(mean_index>best_cindex){
+        best_cindex<-mean_index
+        best_lr=lr
+      }
+    }
+    gc()
+    print(paste0("The best learning rate is ",best_lr))
+    print(paste0("The best C-index is ",best_cindex))
+
+    # search grid in depth and n.minobsinnode
+
+    interaction.depth = c(1,3,5,7,9)
+    best_depth=3
+
+    for(i in seq_len(length(interaction.depth))) {
+      d=interaction.depth[i]
+      print(d)
+      display_progress(i,length(interaction.depth))
+
+      result<-lapply(1:fold,function(j){
+
+        test_index <- folds_list[[1]][[j]]
+        train_index <- setdiff(seq_len(nrow(d.train)), test_index)
+
+        train_fold=d.train[train_index, ]
+        valid_fold=d.train[test_index, ]
+
+        # fit gbm
+        set.seed(seed)  # for reproducibility
+        fit <- gbm::gbm(
+          formula =survival::Surv(time, status) ~ .,
+          data = train_fold,
+          distribution = "coxph",
+          n.trees = 1000,
+          interaction.depth = d,
+          shrinkage =best_lr,
+          n.minobsinnode = 10,
+          cv.folds = fold,
+          keep.data = FALSE,
+          verbose = FALSE,
+          n.cores = 1)
+
+        return(cal_metrics(valid_fold, fit,"GBM")$cindex)
+      })
+
+      mean_index<-mean(unlist(result))
+
+      if(mean_index > best_cindex){
+        best_cindex<-mean_index
+        best_depth=d
+      }
+    }
+
+    pryr::mem_used()
+    gc()
+    print(paste0("The best interaction depth is ",best_depth))
+    print(paste0("The best C-index is ",best_cindex))
+
+    # search grid in depth and n.minobsinnode
+    n.minobsinnode = c(1,5,10,15)
+
+    best_n=10
+
+    for(i in seq_len(length(n.minobsinnode))) {
+      n=n.minobsinnode[i]
+      print(n)
+      display_progress(i,length(n.minobsinnode))
+
+      result<-lapply(1:fold,function(j){
+
+        test_index <- folds_list[[1]][[j]]
+        train_index <- setdiff(seq_len(nrow(d.train)), test_index)
+
+        train_fold=d.train[train_index, ]
+        valid_fold=d.train[test_index, ]
+
+        # fit gbm
+        set.seed(seed)  # for reproducibility
+        fit <- gbm::gbm(
+          formula =survival::Surv(time, status) ~ .,
+          data = train_fold,
+          distribution = "coxph",
+          n.trees = 1000,
+          interaction.depth = best_depth,
+          shrinkage =best_lr,
+          n.minobsinnode = n,
+          cv.folds = fold,
+          keep.data = FALSE,
+          verbose = FALSE,
+          n.cores = 1)
+
+        return(cal_metrics(valid_fold, fit,"GBM")$cindex)
+      })
+
+      mean_index<-mean(unlist(result))
+      print(paste0("Current C-index is ", mean_index))
+
+      if(mean_index > best_cindex){
+        best_cindex<-mean_index
+        best_n=n
+      }
+    }
+
+    pryr::mem_used()
+    gc()
+    print(paste0("The best n.minobsinnode is ",best_n))
+    print(paste0("The best C-index is ",best_cindex))
+
+    # best parameter
+    message("\nOptimal Parameters Identified:")
+    best_param<-list(shrinkage=best_lr,interaction.depth=best_depth,n.minobsinnode=best_n)
+    print(unlist(best_param))
+    ## the modeling function----------------------------------------------
+
+    # performance evaluation of best params in repetition
+    set.seed(seed)
+    folds_list<- create_folds(d.train,fold=fold,nrepeats = 2,strata="status",seed=seed)
+    folds_list<-c(folds_list[[1]],folds_list[[2]])
+    totalN=fold*2
+    ## saving result
+    model_list<-list()
+
+    ## the modeling function----------------------------------------------
+    gbm_cox<-function(train_fold,valid_fold,test_fold,fold,params,seed){
+      set.seed(seed)
+      fit <-gbm::gbm(survival::Surv(time, status) ~ .,
+                     data = train_fold,
+                     distribution = "coxph",
+                     n.trees = 1000,
+                     interaction.depth = params$interaction.depth,
+                     shrinkage = params$shrinkage,
+                     n.minobsinnode = params$n.minobsinnode,
+                     cv.folds = fold,
+                     keep.data = FALSE,
+                     verbose = FALSE,
+                     n.cores = 1)
+      best.iter <- which.min(fit$cv.error)
+
+      # result
+      model <- list(
+        best_param =  list(interaction.depth=params$interaction.depth,
+                           ntrees=best.iter,
+                           shrinkage = best_lr,
+                           n.minobsinnode = params$n.minobsinnode),
+        model = fit,
+        train = cal_metrics(train_fold, fit, "GBM"),
+        valid = cal_metrics(valid_fold, fit,"GBM"),
+        test = cal_metrics(test_fold, fit, "GBM")
+      )
+      return(model)
+    }
+
+    for (j in 1:totalN) {
+      print(j)
+      test_index<-folds_list[[j]]
+      train_index <- setdiff(seq_len(nrow(d.train)), test_index)
+
+      train_fold <- d.train[train_index, ]
+      valid_fold <- d.train[test_index, ]
+
+      ## train data
+      model_list[[j]]<-gbm_cox(train_fold,valid_fold,d.test,fold,best_param,seed=seed)
+
+    }
+
+    ###total data model
+    final_model<-gbm_cox(d.train,d.test,NULL,fold,best_param,seed)
+
+    metrics_list<-extract_metrics(model_list)
+
+    end_time<-Sys.time()
+    run_time<-end_time-start_time
+    print(run_time)
+
+    save("model_list", file = paste0(outdir,"/",sprintf("%d_%d_GBM_result.RData",rep,fold)))
+    save("final_model", file = paste0(outdir,"/",sprintf("%d_%d_final_GBM_result.RData",rep,fold)))
+    save("metrics_list", file = paste0(outdir,"/",sprintf("%d_%d_GBM_cindex_result.RData",rep,fold)))
+
+    return(list(final_model=final_model,metrics_list=metrics_list))
+  }
+
+
   DeepHit_model<-function(d.train,d.test,fold,rep,outdir,seed){
 
     t1<-Sys.time()
@@ -1717,24 +1727,6 @@ ML.survival.model = function(train_data,
 
   ## the main function--------------------------------------------------
 
-  # 9.gbm -------
-  message("---9 GBM ---")
-  set.seed(seed)
-  model.list[[9]]<-gbm_model(d.train,d.test,fold=fold,rep=rep,outdir,seed,ncore)
-  names(model_list)[[9]]<-"GBM"
-
-  # 10.glm -------
-  message("---10 Glm ---")
-  set.seed(seed)
-  model.list[[10]]<-glm_model(d.train,d.test,fold=fold,rep=rep,outdir,seed,ncore)
-  names(model_list)[[10]]<-"GLMBoost"
-
-  # 11.black -------
-  message("---11 blackboost ---")
-  set.seed(seed)
-  model.list[[11]]<-black_model(d.train,d.test,fold=fold,rep=rep,outdir,seed)
-  names(model_list)[[11]]<-"BlackBoost"
-
   # 1.RSF --------
   message("---1 RSF ---")
   set.seed(seed)
@@ -1782,6 +1774,26 @@ ML.survival.model = function(train_data,
   set.seed(seed)
   model.list[[8]]<-xgboost_model(d.train,d.test,fold=fold,rep=rep,outdir,seed)
   names(model_list)[[8]]<-"XGBoost"
+
+  # 9.glm -------
+  message("---10 Glm ---")
+  set.seed(seed)
+  model.list[[9]]<-glm_model(d.train,d.test,fold=fold,rep=rep,outdir,seed,ncore)
+  names(model_list)[[9]]<-"GLMBoost"
+
+  # 10.black -------
+  message("---11 blackboost ---")
+  set.seed(seed)
+  model.list[[10]]<-black_model(d.train,d.test,fold=fold,rep=rep,outdir,seed)
+  names(model_list)[[10]]<-"BlackBoost"
+
+  if (gbm_model==T){
+    # 9.gbm -------
+    message("---9 GBM ---")
+    set.seed(seed)
+    model.list[[11]]<-gbm_model(d.train,d.test,fold=fold,rep=rep,outdir,seed)
+    names(model_list)[[11]]<-"GBM"
+  }
 
   if (deep==T){
     # 12.deepsurv -------
