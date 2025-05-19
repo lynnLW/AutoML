@@ -1155,7 +1155,7 @@ ML.survival.model = function(train_data,
       display_progress(i,length(learning_rate))
       result<-c()
 
-      result <- foreach(j = 1:fold, .packages = c("gbm", "survival")) %dopar% {
+      result <- future.apply::future_lapply(1:fold,function(j){
 
         test_index <- folds_list[[1]][[j]]
         train_index <- setdiff(seq_len(nrow(d.train)), test_index)
@@ -1176,7 +1176,7 @@ ML.survival.model = function(train_data,
           n.cores = 1)
 
         return(cal_metrics(valid_fold, fit,"GBM")$cindex)
-      }
+      },future.seed = T)
 
       mean_index<-mean(unlist(result))
 
