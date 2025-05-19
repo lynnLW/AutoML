@@ -19,7 +19,7 @@ Institute of Trauma and Metabolism, Zhengzhou Central Hospital Affiliated to Zhe
 
 Any technical question, please contact Lin Wang ([1155116558\@link.cuhk.edu.hk](1155116558@link.cuhk.edu.hk)).
 
-copyright, [LynnLab\@ZZU](mailto:LynnLab@ZZU){.email}
+copyright, [LynnLab\@ZZU](mailto:LynnLab@ZZU)
 
 ## Installation
 
