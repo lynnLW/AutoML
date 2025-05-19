@@ -70,4 +70,4 @@ Suggests:
     timeROC,
     e1071,
 Depends: 
-    R (>= 2.10)
+    R (>= 4.3.0)
