@@ -13,7 +13,6 @@ LazyData: true
 RoxygenNote: 7.2.3
 Imports:
     ggplot2,
-    pryr,
     ggpubr,
     survminer,
     survival,

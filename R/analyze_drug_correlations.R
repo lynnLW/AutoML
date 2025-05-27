@@ -74,12 +74,26 @@ analyze_drug_correlations <- function(data,
       dplyr::arrange(.data$p.value) %>%
       dplyr::mutate(p.adj = stats::p.adjust(.data$p.value, method = "BH"))
 
-  # Generate plots for top associations
-  top_drugs <- head(sig_results, top_n)
-  plot_list <- list()
+  # Initialize empty result list
+  result <- list(
+    cor_results = cor_results,
+    top_associations = sig_results,
+    plots = list()
+  )
 
-  for (i in seq_len(nrow(top_drugs))) {
+  if (nrow(sig_results)>0){
+    # Determine actual number of plots to show
+    actual_n <- min(top_n, nrow(sig_results))
+    top_drugs <- head(sig_results, top_n)
+    plot_list <- list()
+
+    for (i in seq_len(nrow(top_drugs))) {
       drug <- top_drugs$drug[i]
+      r_val <- round(top_drugs$r[i], 3)
+      p_val <- format.pval(top_drugs$p.value[i], digits = 3, eps = 0.001)
+
+      # Create annotation text
+      annot_text <- paste0("r = ", r_val, "\np = ", p_val)
 
       plot_list[[drug]] <- ggplot2::ggplot(
         data = data,
@@ -99,9 +113,18 @@ analyze_drug_correlations <- function(data,
           se = FALSE,
           na.rm = TRUE
         ) +
+        # Add correlation annotation
+        ggplot2::annotate(
+          "text",
+          x = Inf, y = Inf,
+          label = annot_text,
+          hjust = 1.1, vjust = 1.1,
+          size = 3,
+          color = "black"
+        ) +
         ggplot2::labs(
           title = "",
-          x = paste(drug, "IC50"),
+          x = paste(drug),
           y = "Risk Score"
         ) +
         ggplot2::theme_bw()+
@@ -114,27 +137,42 @@ analyze_drug_correlations <- function(data,
         )
     }
 
-  # Create combined plot
-  combined_plot <- patchwork::wrap_plots(plot_list, ncol = ncol) +
-    patchwork::plot_annotation(
-      title = "Top Drug-Risk Score Correlations",
-      theme = theme(
-        plot.title = element_text(face = "bold", hjust = 0.5, size = 12)
-      ))
-  print(combined_plot)
+    result$plots <- plot_list
 
-  # Define output path
-  file_path <- file.path(outdir, paste0("top_cor_combined.jpg"))
+    # Create combined plot with dynamic height
+    n_plots <- length(plot_list)
+    nrow <- ceiling(n_plots / ncol)
 
-  # Save plot
-  ggplot2::ggsave(
-    filename = file_path,
-    plot = combined_plot,
-    width = 12,
-    height = 22,
-    device = "jpg",
-    units="cm",
-    dpi=600
-  )
+    # Calculate dynamic height (base height per row is 8cm)
+    plot_height <- max(8 * nrow, 12)  # Minimum height of 12cm
+
+    # Create combined plot
+    combined_plot <- patchwork::wrap_plots(plot_list, ncol = ncol) +
+      patchwork::plot_annotation(
+        title = "Top Drug-Risk Score Correlations",
+        subtitle = paste("Showing", n_plots, "significant associations"),
+        theme = theme(
+          plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
+          plot.subtitle = element_text(hjust = 0.5, size = 10)
+        )
+      )
+
+    print(combined_plot)
+
+    # Define output path
+    file_path <- file.path(outdir, paste0("top_cor_combined.jpg"))
+
+    # Save plot with dynamic dimensions
+    ggplot2::ggsave(
+      filename = file_path,
+      plot = combined_plot,
+      width = 12 * min(ncol, 2),  # Adjust width based on number of columns
+      height = plot_height,
+      device = "jpg",
+      units = "cm",
+      dpi = 600
+    )
+  }
+
 }
 
