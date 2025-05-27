@@ -1,7 +1,7 @@
 # AutoML
-Construction of prognostic models using machine learning algorithms 
+Construction of prognostic models using machine learning (ML) algorithms 
 
-AutoML is used to select prognostic genes, construct prognostic models, and evaluate model performance using RNA-seq and microarray data. AutoML has 11 built-in ML algorithms.
+AutoML is used to select prognostic genes, construct predictive models, and evaluate model performance using RNA-seq and microarray data. AutoML has 11 built-in ML algorithms.
 
 **Graphical Abstract：** ![E2F-flowchart-AutoML](https://github.com/user-attachments/assets/770a353e-4159-4453-a667-17686ad37e2c)
 
@@ -30,7 +30,7 @@ You may install this package with:
 # options(BioC_mirror="http://mirrors.tuna.tsinghua.edu.cn/bioconductor/")
 if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
 
-list.of.packages <- c("devtools","dplyr", "stringr", "survival", "survminer", "survcomp", "aplot", "ggplot2", "ggpubr", "caret", "survivalROC","e1071", "GSVA", "glmnet",  "msigdbr", "randomForestSRC" , "plsRcox", "superpc", "gbm", "CoxBoost", "xgboost", "mboost")
+list.of.packages <- c("devtools", "dplyr", "stringr", "survival", "survminer", "survcomp", "aplot", "ggplot2", "ggpubr", "caret", "survivalROC", "e1071", "GSVA", "glmnet",  "msigdbr", "randomForestSRC", "plsRcox", "superpc", "gbm", "CoxBoost", "xgboost", "mboost")
 #checking missing packages from the list
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 packToInst <- setdiff(list.of.packages, installed.packages())
@@ -39,13 +39,13 @@ lapply(packToInst, function(x){
   BiocManager::install(x,ask = F,update = F)
 })
 
-# You can install AutoML from Github:
+# You can install AutoML from GitHub:
 devtools::install_github("lynnLW/AutoML")
 ```
 
 ## Example
 
-### Feature select of candidate genes:
+### Feature selection of candidate genes:
 
 ```{r}
 ## load R package and internal data set
@@ -147,7 +147,7 @@ print(candidate_genes)
 model_auc_list<-cal_vali_index(list_train_vali_Data,candidate_genes,model.list,rep=1,outdir="4.test/")
 ```
 
-### Plot C-index in all cohort
+### Plot C-index in all cohorts
 
 ```{r}
 cindex_rank(vali_auc_list = model_auc_list,index="cindex",train="Train",plot_type="barplot",outdir="4.test/")
@@ -158,7 +158,7 @@ cindex_rank(vali_auc_list = model_auc_list,index="km_auc_3",train="Train",plot_t
 ![3](https://github.com/user-attachments/assets/f66a09dd-9083-4cd2-b0a8-fbaf9b28a6ef)
 
 
-### Plot roc curves in all cohort
+### Plot ROC curves in all cohorts
 ```{r}
 roc_plot(vali_auc_list = model_auc_list,model="all",outdir="4.test/")
 
@@ -166,7 +166,7 @@ roc_plot(vali_auc_list = model_auc_list,model="all",outdir="4.test/")
 ![4](https://github.com/user-attachments/assets/ee170036-f123-4249-94e4-4ecaad3fa370)
 
 
-### plot KM survival curves in all cohort
+### plot KM survival curves in all cohorts
 ```{r}
 surv_plot(vali_auc_list = model_auc_list,model="all",outdir="4.test/")
 ```
@@ -184,7 +184,7 @@ rs_list=lapply(model_auc_list[[model_name]],function(x){x[[1]]$pred_df})
 outdir=paste0("5.multicox/GBM")
 dir.create(outdir,recursive = T)
 
-# Multicox analysis for each cohort
+# Multivariate Cox analysis for each cohort
 con_summary<-c()
 for(i in 1:length(rs_list)){
     # risk table 
@@ -214,21 +214,21 @@ for(i in 1:length(rs_list)){
 ### Comparison with published signatures
 ```{r}
 
+##comparison with published signatures
 load("inst/extdata/test_index.Rdata")
-load("inst/extdata/all_model_list.rdata")
-load("inst/extdata/published_auc_list.rdata")
 own_auc_list[['Own']]<-model_auc_list
-
-indexs=c("Cindex","AUC_1","AUC_2","AUC_3","AUC_5","AUC_7")
-dataset<-names(own_auc_list[[1]][[1]])
-outdir=paste0("../test/6.comparison/")
+load("inst/extdata/published_auc_list.rdata")
+published_auc_list[['Published']]<-model_auc_list
+indices=c("Cindex","AUC_1","AUC_2","AUC_3","AUC_5","AUC_7")
 dir.create(paste0(outdir,"/",model_name),recursive = T)
-model_name="GBM"
-p<-index_comp(own_auc_list =own_auc_list,
-                published_auc_list=published_auc_list,
-                model_name='GBM',  
-                dataset=names(own_auc_list[[1]][[1]]),
-                index="Cindex")
-p
-ggsave(p,file=paste0(outdir,"/",model_name,"/",index,".jpg"),dpi=600,height =6,width =30,units="cm")
+for (index in indices){
+  p<-index_comp(own_auc_list =own_auc_list,
+                  published_auc_list=published_auc_list,
+                  model_name='GBM',
+                  dataset=names(own_auc_list[[1]][[1]]),
+                  index="Cindex")
+  p
+  ggsave(p,file=paste0("6.comparison/GBM/",index,".jpg"),dpi=600,height =6,width =30,units="cm")
+}
 ```
+![7](https://github.com/user-attachments/assets/f4adf37b-4cb6-4b2c-a794-a8bea33234ed)
