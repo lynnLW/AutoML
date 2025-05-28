@@ -142,7 +142,6 @@ cindex_rank2(model_list=model.list,outdir="3.figure/")
 ```{r}
 # loading external validation cohort
 # load("inst/extdata/train_features.Rdata") # The final selected genes
-candidate_genes<-common_feature[4:length(common_feature)]
 print(candidate_genes)
 #[1] "AXIN1" "JAG1"  "KAT2A" "NCSTN"
 
@@ -172,7 +171,7 @@ roc_plot(vali_auc_list = model_auc_list,model="all",outdir="test/4.test/")
 
 ### Plot KM survival curves in all cohorts
 ```{r}
-surv_plot(vali_auc_list = model_auc_list,model="all",outdir="4.test/")
+surv_plot(vali_auc_list = model_auc_list,model="all",outdir="test/4.test/")
 ```
 ![5](https://github.com/user-attachments/assets/48005504-a230-4067-8182-d2436c04e44b)
 
@@ -203,7 +202,7 @@ for(i in 1:length(rs_list)){
       features = colnames(meta),
       gene = "rs",
       dataset_name = names(rs_list)[i],
-      outdir = "5.multicox/GBM",
+      outdir = "test/5.multicox/GBM",
       cut_type = NULL
     )
 }
@@ -214,8 +213,6 @@ for(i in 1:length(rs_list)){
 
 ### Comparison with published signatures
 ```{r}
-
-##comparison with published signatures
 #load("inst/extdata/test_index.Rdata")
 own_auc_list[['Own']]<-model_auc_list
 #load("inst/extdata/published_auc_list.rdata") #published signatures modeling using ML.survival.model and cal_vali_index function
@@ -337,6 +334,7 @@ for (i in 1:length(group_list)){
   rs_df<-rs_df[row.names(result),]
   merge_df<-cbind(rs_df$pred,result)
   names(merge_df)[1]<-"risk_score"
+  # calculate correlations
   analyze_drug_correlations(
     data = merge_df,
     risk_score_col = "risk_score",
