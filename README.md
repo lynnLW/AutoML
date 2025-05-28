@@ -78,8 +78,10 @@ head(selected.feature[1:5,]) # view selected feature
 #3           Lasso        KAT2A
 #4           Lasso        NCSTN
 #5 Enet[alpha=0.5]        AXIN1
+```
+### Identified prognostic genes selected by at least 7 ML algorithms
 
-## Identified prognostic gene selected by at least 7 ML algorithms
+```{r}
 ## load("inst/extdata/5_selected_feature.Rdata") example result from feature selection function
 f<-top_feature_select(selected.feature = selected.feature,
                         nmethod = 7,
@@ -183,11 +185,8 @@ load("inst/extdata/list_train_vali_meta")
 # Extract the risk score of the best model
 model_name='GBM'
 rs_list=lapply(model_auc_list[[model_name]],function(x){x[[1]]$pred_df})
-outdir=paste0("5.multicox/GBM")
-dir.create(outdir,recursive = T)
 
 # Multivariate Cox analysis for each cohort
-con_summary<-c()
 for(i in 1:length(rs_list)){
     # risk table 
     dataset_name<-names(rs_list)[i]
@@ -217,12 +216,11 @@ for(i in 1:length(rs_list)){
 ```{r}
 
 ##comparison with published signatures
-load("inst/extdata/test_index.Rdata")
+#load("inst/extdata/test_index.Rdata")
 own_auc_list[['Own']]<-model_auc_list
-load("inst/extdata/published_auc_list.rdata")
+#load("inst/extdata/published_auc_list.rdata") #published signatures modeling using ML.survival.model and cal_vali_index function
 published_auc_list[['Published']]<-model_auc_list
-indices=c("Cindex","AUC_1","AUC_2","AUC_3","AUC_5","AUC_7")
-dir.create(paste0(outdir,"/",model_name),recursive = T)
+indices=c("Cindex","AUC_1","AUC_2","AUC_3","AUC_5","AUC_7","AUC_10")
 for (index in indices){
   p<-index_comp(own_auc_list =own_auc_list,
                   published_auc_list=published_auc_list,
@@ -230,47 +228,15 @@ for (index in indices){
                   dataset=names(own_auc_list[[1]][[1]]),
                   index="Cindex")
   p
-  ggsave(p,file=paste0("6.comparison/GBM/",index,".jpg"),dpi=600,height =6,width =30,units="cm")
+  ggsave(p,file=paste0("test/comparison/GBM/",index,".jpg"),dpi=600,height =6,width =30,units="cm")
 }
 ```
 ![7](https://github.com/user-attachments/assets/f4adf37b-4cb6-4b2c-a794-a8bea33234ed)
 
 ### Functional enrichment
-```{r}
-load("inst/extdata/list_train_vali_Data") ## Full genes not only feature genes
-load("inst/extdata/list_train_vali_meta")
-###Predictive metabolites, metabolic and cancer hallmark pathways, immune cells scores using ssgsea
-library(dplyr)
-MPI_list<-list()
-Immune_list<-list()
-hallmark_list<-list()
-metabolic_list<-list()
-for (i in 1:length(list_train_vali_Data)){
-  expr<-list_train_vali_Data[[i]][,-c(1:3)] %>% t() %>% as.data.frame()
-  dataset_name=names(list_train_vali_Data)[i]
-  gs<-geneset_cal(expr,category="H",output_dir = paste0("test/H/",dataset_name)) #hallmark
-  hallmark_list[[i]]<-gs
-  gs<-geneset_cal(expr,category="TILs",output_dir = paste0("test/Immune/TILs/",dataset_name)) # immune cell
-  Immune_list[[i]]<-gs
-  gs<-geneset_cal(expr,category="MPI",output_dir = paste0("test/MPI/",dataset_name)) #predictive metabolites
-  MPI_list[[i]]<-gs
-  gs<-geneset_cal(expr,category="Metabolic",output_dir = paste0("test/Metabolic/",dataset_name)) #metabolic pathways
-  metabolic_list[[i]]<-gs
-}
 
-# Setting parallel calculations through a MulticoreParam back-end
-# with workers=4 and tasks=100.
-# Estimating ssGSEA scores for 11 gene sets.
-# [1] "Calculating ranks..."
-# [1] "Calculating absolute values from ranks..."
-#   |==========================================================================================================| # 100%
-# [1] "Normalizing..."
-# Finished! Results saving in:test/Metabolic/Train/GSVA_Metabolic_ssgsea.csv
-```
-
-### Functional enrichment
 ```{r}
-load("inst/extdata/list_train_vali_Data") ## Full genes not only feature genes
+#load("inst/extdata/list_train_vali_Data") ## Full genes not only feature genes
 #Predictive metabolites, metabolic and cancer hallmark pathways, immune cells scores using ssgsea
 library(dplyr)
 MPI_list<-list()
@@ -292,6 +258,15 @@ for (i in 1:length(list_train_vali_Data)){
 names(metabolic_list)<-names(list_train_vali_Data)
 names(Immune_list)<-names(list_train_vali_Data)
 names(MPI_list)<-names(list_train_vali_Data)
+
+# Setting parallel calculations through a MulticoreParam back-end
+# with workers=4 and tasks=100.
+# Estimating ssGSEA scores for 11 gene sets.
+# [1] "Calculating ranks..."
+# [1] "Calculating absolute values from ranks..."
+#   |==========================================================================================================| # 100%
+# [1] "Normalizing..."
+# Finished! Results saving in:test/Metabolic/Train/GSVA_Metabolic_ssgsea.csv
 ```
 
 ### Functional differences between high- and low-risk groups
@@ -307,6 +282,7 @@ for (i in 1:length(auc_list)){
 }
 save(group_list,file=paste0("test/grouping/group_list.rdata"))
 ```
+
 #### Calculate the correlation between the risk score and functional pathways
 ```{r}
 for (i in 1:length(auc_list)){
@@ -332,7 +308,46 @@ for (i in 1:length(auc_list)){
 ![top_diff_combined](https://github.com/user-attachments/assets/7ee08dd1-58b7-414f-90ca-50a8a9b0476d)
 
 
+### Calculate the drug sensitivity of each cohort
 
+```{r}
+#calculate sensitivity
+library(dplyr)
+library(limma)
+for (i in 1:length(list_train_vali_Data)){
+  dataset_name=names(list_train_vali_Data)[i]
+  expr<-list_train_vali_Data[[dataset_name]][,-c(1:3)] %>% t() %>% as.data.frame() # col: samples
+  expr<-normalizeQuantiles(expr) #normalized
+  cal_drug_sensitive(expr,database ="CTRP2",output_filename =paste0(dataset_name,"_drug_sensitivity"))
+}
+```
 
+### Drug sensitivity differences between high- and low-risk groups
 
+```{r}
+#load("inst/extdata/group_list.rdata")
+drug_file<-list.files("./calcPhenotype_Output/",pattern = "csv",full.names = T)
+for (i in 1:length(group_list)){
+  dataset<-names(group_list)[i]
+  file<-drug_file[grep(dataset,drug_file)]
+  result<-read.csv(file,row.names = 1)
+  head(result[1:5,1:5])
+  result<-scale(result) %>% as.data.frame()
+  rs_df<-group_list[[dataset]]
+  rs_df<-rs_df[row.names(result),]
+  merge_df<-cbind(rs_df$pred,result)
+  names(merge_df)[1]<-"risk_score"
+  analyze_drug_correlations(
+    data = merge_df,
+    risk_score_col = "risk_score",
+    r_threshold = 0,
+    top_n = 10,
+    ncol = 2,
+    outdir=paste0("test/drug/",dataset))
+  # calculate differences
+  cal_diff(result,rs_df$group,outdir=paste0("test/drug/",dataset))
+}
 
+```
+![top_cor_combined](https://github.com/user-attachments/assets/95198f12-90e3-416f-9e3e-48f337522a12)
+![top_diff_combined](https://github.com/user-attachments/assets/3bfd1840-2816-49e2-ad2f-aec99171ff02)
