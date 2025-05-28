@@ -70,7 +70,7 @@ genelist
 ## feature select by DEG, cox, and ML filtering
 selected.feature<-feature_selection(InputMatrix,
                                     genelist=genelist,
-                                    outdir="1.feature_selection/")
+                                    outdir="test/feature_selection/")
 head(selected.feature[1:5,]) # view selected feature
 #           method selected.fea
 #1           Lasso        AXIN1
@@ -87,7 +87,7 @@ f<-top_feature_select(selected.feature = selected.feature,
                         nmethod = 7,
                         width=7.5,
                         height = 10,
-                        outdir="test/1.feature_selection/")
+                        outdir="test/feature_selection/")
 # The final selected genes: 4 
 ```
 ![1](https://github.com/user-attachments/assets/8603b5c5-1c36-44f4-b10b-e3f882b3945c)
@@ -109,7 +109,7 @@ model.list<-ML.survival.model(train_data,# The training data
                                 p=0.75,
                                 deep_method = F,
                                 gbm_method = F, # memory consuming
-                                outdir="test/2.train/",
+                                outdir="test/train/",
                                 seed=5201314,
                                 ncore=4)
 ```
@@ -121,7 +121,7 @@ model.list<-ML.survival.model(train_data,# The training data
 # extract cindex list
 cindex_list<-lapply(model_list,function(x)x$metrics_list)
 # Show C-index of each ML algorithm
-cindex_rank2(cindex_list,order="valid",index="all",outdir="3.figure/",plot_type="boxplot")
+cindex_rank2(cindex_list,order="valid",index="all",outdir="test/evaluation/",plot_type="boxplot")
 ```
 
 ![2](https://github.com/user-attachments/assets/2da7b68d-bc1e-4165-b4f2-331f88f43339)
@@ -131,7 +131,7 @@ cindex_rank2(cindex_list,order="valid",index="all",outdir="3.figure/",plot_type=
 # extract model list
 model.list<-lapply(model_list,function(x)x$final_model)
 # Show C-index of all final ML models
-cindex_rank2(model_list=model.list,outdir="3.figure/")
+cindex_rank2(model_list=model.list,outdir="test/evaluation/")
 ```
 ![image](https://github.com/user-attachments/assets/dc34422b-844c-41ee-a38e-385a18570812)
 
@@ -147,31 +147,31 @@ print(candidate_genes)
 
 # load("inst/extdata/list_train_vali_Data") # The validation cohort list
 # calculate c-index and time-dependent AUC values
-model_auc_list<-cal_vali_index(list_train_vali_Data,candidate_genes,model.list,rep=1,outdir="test/4.test/")
+model_auc_list<-cal_vali_index(list_train_vali_Data,candidate_genes,model.list,rep=1,outdir="test/validation/")
 ```
 
 ### Plot C-index in all cohorts
 
 ```{r}
 # load("inst/extdata/test_index.Rdata") example result from cal_vali_index
-cindex_rank(vali_auc_list = model_auc_list,index="cindex",train="Train",plot_type="barplot",outdir="test/4.test/")
-cindex_rank(vali_auc_list = model_auc_list,index="km_auc_1",train="Train",plot_type="barplot",outdir="test/4.test/")
-cindex_rank(vali_auc_list = model_auc_list,index="km_auc_2",train="Train",plot_type="barplot",outdir="test/4.test/")
-cindex_rank(vali_auc_list = model_auc_list,index="km_auc_3",train="Train",plot_type="barplot",outdir="test/4.test/")
+cindex_rank(vali_auc_list = model_auc_list,index="cindex",train="Train",plot_type="barplot",outdir="test/validation/")
+cindex_rank(vali_auc_list = model_auc_list,index="km_auc_1",train="Train",plot_type="barplot",outdir="test/validation/")
+cindex_rank(vali_auc_list = model_auc_list,index="km_auc_2",train="Train",plot_type="barplot",outdir="test/validation/")
+cindex_rank(vali_auc_list = model_auc_list,index="km_auc_3",train="Train",plot_type="barplot",outdir="test/validation/")
 ```
 ![3](https://github.com/user-attachments/assets/f66a09dd-9083-4cd2-b0a8-fbaf9b28a6ef)
 
 
 ### Plot ROC curves in all cohorts
 ```{r}
-roc_plot(vali_auc_list = model_auc_list,model="all",outdir="test/4.test/")
+roc_plot(vali_auc_list = model_auc_list,model="all",outdir="test/validation/")
 ```
 ![4](https://github.com/user-attachments/assets/ee170036-f123-4249-94e4-4ecaad3fa370)
 
 
 ### Plot KM survival curves in all cohorts
 ```{r}
-surv_plot(vali_auc_list = model_auc_list,model="all",outdir="test/4.test/")
+surv_plot(vali_auc_list = model_auc_list,model="all",outdir="test/validation/")
 ```
 ![5](https://github.com/user-attachments/assets/48005504-a230-4067-8182-d2436c04e44b)
 
@@ -202,7 +202,7 @@ for(i in 1:length(rs_list)){
       features = colnames(meta),
       gene = "rs",
       dataset_name = names(rs_list)[i],
-      outdir = "test/5.multicox/GBM",
+      outdir = "test/multicox/GBM",
       cut_type = NULL
     )
 }
