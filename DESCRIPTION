@@ -14,10 +14,14 @@ RoxygenNote: 7.2.3
 Imports:
     ggplot2,
     ggpubr,
+    ggsci,
+    tidyr,
+    parallel,
     survminer,
     survival,
     survcomp,
     survivalROC,
+    timeROC,
     dplyr,
     GSVA,
     broom,
@@ -35,6 +39,7 @@ Imports:
     xgboost,
     mboost,
     caret,
+    oncoPredict,
     aplot
 Suggests:
     UpSetR,
@@ -60,13 +65,10 @@ Suggests:
     DOSE,
     patchwork,
     Matrix,
-    parallel,
     keras,
     tensorflow,
-    oncoPredict,
     reshape2,
     tidyselect,
-    timeROC,
     e1071,
 Depends: 
     R (>= 4.3.0)

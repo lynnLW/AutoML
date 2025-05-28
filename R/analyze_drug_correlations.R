@@ -24,6 +24,7 @@
 #' @importFrom dplyr filter arrange mutate %>% bind_rows
 #' @import ggplot2
 #' @importFrom utils head
+#' @export
 analyze_drug_correlations <- function(data,
                                       risk_score_col = "risk_score",
                                       cor_method = "pearson",
@@ -43,6 +44,11 @@ analyze_drug_correlations <- function(data,
 
   if (!cor_method %in% c("pearson", "spearman")) {
     stop("cor_method must be either 'pearson' or 'spearman'")
+  }
+
+  # output directory
+  if (!dir.exists(outdir)){
+    dir.create(outdir,recursive = T)
   }
 
   drug_cols <- setdiff(colnames(data), risk_score_col)

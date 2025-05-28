@@ -184,7 +184,7 @@ geneset_cal <- function(expr_matrix,
 
     # saving
     write.csv(result_df, file = output_file, row.names = TRUE)
-    message("Finshed! Results saving in:", output_file)
+    message("Finished! Results saving in:", output_file)
 
     return(result_df)
 

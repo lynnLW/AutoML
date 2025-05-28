@@ -22,6 +22,8 @@ generate_multicox_analysis <- function(data, features, gene, dataset_name, outdi
   log_file <- file.path(outdir, "analysis_errors.log")
   if (!file.exists(log_file)) file.create(log_file)
 
+  if (!dir.exists(outdir)) dir.create(outdir)
+
   # main function ------------------------------------------------------------
 
   # check the input

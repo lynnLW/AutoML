@@ -15,6 +15,7 @@
 #' @param seed Random seed
 #' @param ncore Number of CPU cores for parallelization
 #' @importFrom dplyr %>% group_by summarise
+#' @importFrom parallel mclapply
 #' @importFrom ggplot2 ggplot aes geom_point
 #' @importFrom stats predict median model.weights
 #' @importFrom survival Surv

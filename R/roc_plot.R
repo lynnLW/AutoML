@@ -8,7 +8,8 @@
 #' @param outdir Output directory path for saving plots
 #' @param colors Custom color palette for cohorts (length should match number of cohorts)
 #' @import ggplot2
-#' @import survival
+#' @import timeROC
+#' @importFrom survival Surv
 #' @importFrom dplyr %>% distinct arrange mutate left_join
 #' @return ggplot object or list of ggplot objects
 #' @export
@@ -28,14 +29,11 @@ roc_plot <- function(vali_auc_list,
     colors <- colors
   }
 
-  ## loading packages
-  if (!requireNamespace("survival", quietly = TRUE)) {
-    stop("Package 'survival' required but not installed.")
-  }
-
   ## time dependent plot
   generate_time_roc_plot<-function(index_df,model_name,cohort_name,subdir){
 
+    ## loading packages
+    library(survival)
     roc<-timeROC::timeROC(T=index_df$time,
                           delta=index_df$status,
                           marker = index_df$pred,

@@ -7,9 +7,8 @@
 #' @param model_name Specific model name to compare from published_auc_list
 #' @param dataset_col Optional color vector for datasets (default uses ggplot colors)
 #' @param dataset Character vector of dataset names
-#' @param index Metrics to compare ("cindex", "AUC_1", "AUC_3", etc.)
+#' @param index Metrics to compare ("cindex", "AUC_1", "AUC_3")
 #' @import ggplot2
-#'
 #' @return ggplot2 object showing performance comparison
 #' @export
 #'

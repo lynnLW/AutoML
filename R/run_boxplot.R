@@ -20,7 +20,7 @@ generate_two_boxplot<-function(expr_matrix, ### expr dataframe col features rows
                          method="t.test",
                          width=5.5,
                          height=7,
-                         outdir="gene_expression/boxplot/"){
+                         outdir="boxplot/"){
 
   ##
   if (is.null(dataset_name)){
