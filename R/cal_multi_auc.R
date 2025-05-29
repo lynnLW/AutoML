@@ -9,6 +9,7 @@
 #' @param cuts Numeric vector of time points to evaluate (default: c(1,2,3,5,7,10))
 #' @param unit Time unit: "m" (months), "d" (days), or "y" (years)
 #' @return List containing AUC values, false positive rates, and true positive rates
+#' @export
 cal_multi_auc <- function(newdata, model, model_name, cuts = NULL, unit = "m") {
   # Parameter Validation ----------------------------------------------------
   ## Check required columns

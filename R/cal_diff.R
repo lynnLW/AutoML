@@ -68,7 +68,7 @@ cal_diff <- function(expr_matrix,
     dplyr::select(all_of(top_features)) %>%
     dplyr::bind_cols(group = grouping) %>%
     tidyr::pivot_longer(
-      cols = -group,
+      cols = -.data$group,
       names_to = "Feature",
       values_to = "Expression"
     )

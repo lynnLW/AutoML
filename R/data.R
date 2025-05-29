@@ -25,19 +25,3 @@
 #' }
 #' @source Derived from GEO \url{https://www.ncbi.nlm.nih.gov/geo/}
 "demo_list"
-
-#' Results Example
-#'
-#' Precomputed  results demonstrating the expected output format
-#' of the analysis functions. This dataset serves as a reference for users to
-#' understand and validate their own analysis results.
-#'
-#' @format A list containing analysis results:
-#' \describe{
-#'   \item{feature_select}{a data frame containing results from feature selection}
-#'   \item{candidate_genes}{a vector of gene list for modeling}
-#'   \item{10_5_model_list}{a list containing results from ML.survival.model}
-#'   \item{test_index}{List of each model containing performace metrics in external validation cohorts}
-#' }
-#' @source Generated from example results using data in demo list
-"demo_result"
