@@ -51,14 +51,28 @@ analyze_drug_correlations <- function(data,
     dir.create(outdir,recursive = T)
   }
 
-  drug_cols <- setdiff(colnames(data), risk_score_col)
+  # examine NA proportion
+  # 检查NA值比例
+  na_proportion <- colMeans(is.na(data))
+  print(na_proportion[na_proportion > 0.5]) # NA proportion > 50%
+
+  # remove NA drugs
+  clean_data <- data[rowSums(is.na(data)) < ncol(data)*0.5, ] # remove NA proportion > 50%
+  clean_data <- clean_data[, colMeans(is.na(clean_data)) < 0.5] #
+
+  # NA in risk_score_col
+  if(any(is.na(clean_data[[risk_score_col]]))) {
+    clean_data <- clean_data[!is.na(clean_data[[risk_score_col]]), ]
+  }
+
+  drug_cols <- setdiff(colnames(clean_data), risk_score_col)
 
   # Compute correlations
   cor_results <- lapply(drug_cols, function(drug) {
     ct <- suppressWarnings(
       stats::cor.test(
-        x = data[[drug]],
-        y = data[[risk_score_col]],
+        x = clean_data[[drug]],
+        y = clean_data[[risk_score_col]],
         method = cor_method,
         exact = FALSE
       )
@@ -68,17 +82,17 @@ analyze_drug_correlations <- function(data,
       drug = drug,
       r = ct$estimate,
       p.value = ct$p.value,
-      n = sum(stats::complete.cases(data[, c(drug, risk_score_col)])))
+      n = sum(stats::complete.cases(clean_data[, c(drug, risk_score_col)])))
   }) %>% dplyr::bind_rows()
-
-  utils::write.csv(cor_results,file=paste0(outdir,"/cor_results.csv"))
 
   # Apply significance filters and FDR correction
   sig_results <- cor_results %>%
     dplyr::filter(abs(.data$r) > r_threshold &
-                      .data$p.value < p_threshold) %>%
-      dplyr::arrange(.data$p.value) %>%
-      dplyr::mutate(p.adj = stats::p.adjust(.data$p.value, method = "BH"))
+                    .data$p.value < p_threshold) %>%
+    dplyr::arrange(.data$p.value) %>%
+    dplyr::mutate(p.adj = stats::p.adjust(.data$p.value, method = "BH"))
+
+  utils::write.csv(sig_results,file=paste0(outdir,"/cor_results.csv"))
 
   # Initialize empty result list
   result <- list(
@@ -102,7 +116,7 @@ analyze_drug_correlations <- function(data,
       annot_text <- paste0("r = ", r_val, "\np = ", p_val)
 
       plot_list[[drug]] <- ggplot2::ggplot(
-        data = data,
+        data = clean_data,
         mapping = aes(
           x = .data[[drug]],
           y = .data[[risk_score_col]]
