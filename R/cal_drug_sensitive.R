@@ -12,14 +12,16 @@
 #' @importFrom utils write.csv
 #' @export
 cal_drug_sensitive <- function(test.data,
-                               database = c("CTRP2", "GDSC1", "GDSC2"),
+                               database = c("CTRP2", "GDSC1", "GDSC2","GDSC1_new","GDSC2_new"),
                                TPM = TRUE,
                                output_dir = "./calcPhenotype_Output",
                                output_filename = "DrugPredictions") {
 
+  requireNamespace("oncoPredict")
+
   # validate parameter
-  if (!database %in% c("CTRP2", "GDSC1", "GDSC2")) {
-    stop("database must be one of: 'CTRP2', 'GDSC1', 'GDSC2'")
+  if (!database %in% c("CTRP2", "GDSC1", "GDSC2","GDSC1_new","GDSC2_new")) {
+    stop("database must be one of: 'CTRP2', 'GDSC1', 'GDSC2','GDSC1_new','GDSC2_new'")
   }
 
   if (!is.matrix(test.data) && !is.data.frame(test.data)) {
@@ -38,22 +40,42 @@ cal_drug_sensitive <- function(test.data,
   }
   output_path <- file.path(output_dir, paste0(output_filename, ".csv"))
 
-  # loading drug data
-  file_path <- system.file("extdata", "internal_drug_data.rda", package = "AutoML")
-  internal_drug_data <- get(load(file_path))
-
-  # Select appropriate training data
-  training_data <- switch(database,
-                          "CTRP2" = if (TPM) {
-                            internal_drug_data$training_data$CTRP2_TPM_Expr
-                          } else {
-                            internal_drug_data$training_data$CTRP2_RPKM_Expr
-                          },
-                          "GDSC1" = internal_drug_data$training_data$GDSC1_Expr,
-                          "GDSC2" = internal_drug_data$training_data$GDSC2_Expr
+  # loading
+  data_files <- c(
+    system.file("extdata", "internal_drug_data.rdata", package = "AutoML"),
+    system.file("extdata", "internal_new_drug_data.rdata", package = "AutoML"),
+    system.file("extdata", "internal_expr_data.rdata", package = "AutoML")
   )
 
-  drug_data <- internal_drug_data$drug_data[[database]]
+  if (!all(file.exists(data_files))) {
+    stop("Required data files not found in AutoML package")
+  }
+
+  # 加载数据
+  if(database %in% c("CTRP2", "GDSC1", "GDSC2")){
+    internal_drug_data <- get(load(data_files[1]))
+    internal_expr_data <- get(load(data_files[3]))
+  } else if (database %in% c("GDSC1_new", "GDSC2_new")){
+    internal_drug_data <- get(load(data_files[2]))
+    internal_expr_data <- get(load(data_files[3]))
+  }
+
+  # 选择训练数据
+  training_data <- switch(database,
+                          "CTRP2" = {
+                            if (TPM) {
+                              internal_drug_data$training_data$CTRP2_TPM_Expr
+                            } else {
+                              internal_drug_data$training_data$CTRP2_RPKM_Expr
+                            }
+                          },
+                          "GDSC1" = internal_expr_data$GDSC1_Expr,
+                          "GDSC2" = internal_expr_data$GDSC2_Expr,
+                          "GDSC1_new" = internal_expr_data$GDSC1_Expr,
+                          "GDSC2_new" = internal_expr_data$GDSC1_Expr
+  )
+
+  drug_data <- internal_drug_data[[database]]
 
   # Ensure matching samples between training and drug data
   if (!identical(rownames(drug_data), colnames(training_data))) {
@@ -65,37 +87,28 @@ cal_drug_sensitive <- function(test.data,
     training_data <- training_data[, common, drop = FALSE]
   }
 
-  # revise oncopredict output
-  original_dir <- getOption("oncoPredict.outputDirectory")
-  options(oncoPredict.outputDirectory = output_dir)
-  on.exit(options(oncoPredict.outputDirectory = original_dir))
-
   # Calculate drug sensitivity predictions
   results <- tryCatch(
     oncoPredict::calcPhenotype(
       trainingExprData = training_data,
-      trainingPtype = drug_data,
+      trainingPtype = as.matrix(drug_data),
       testExprData = as.matrix(test.data),
       batchCorrect = "none",
-      powerTransformPhenotype = TRUE,
+      powerTransformPhenotype = T,
       removeLowVaryingGenes = 0.2,
       minNumSamples = 10,
       printOutput = TRUE,
-      removeLowVaringGenesFrom = 'rawData'
+      removeLowVaringGenesFrom = 'rawData',
+      folder=F
     ),
     error = function(e) {
       stop("Drug sensitivity prediction failed: ", e$message)
     }
   )
 
-  # output file
-  original_output <- file.path(output_dir, "DrugPredictions.csv")
-  if (file.exists(original_output)) {
-    file.rename(original_output, output_path)
-    message("Results saved to: ", output_path)
-  } else {
-    warning("Prediction completed but output file not found at: ", original_output)
-  }
+  # 保存结果
+  write.csv(results, file = output_path, row.names = TRUE)
+  message("Results saved to: ", output_path)
 
   # return result
   invisible(results)
