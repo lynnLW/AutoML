@@ -87,13 +87,24 @@ cal_drug_sensitive <- function(test.data,
     training_data <- training_data[, common, drop = FALSE]
   }
 
+  # Ensure matching genes between training and test data
+
+  if (!identical(rownames(test.data), rownames(training_data))) {
+    common <- intersect(rownames(test.data), rownames(training_data))
+    if (length(common) == 0) {
+      stop("No matching samples found between training and drug data")
+    }
+    test.data <- test.data[common, , drop = FALSE]
+    training_data <- training_data[common, ,drop = FALSE]
+  }
+
   # Calculate drug sensitivity predictions
   results <- tryCatch(
     oncoPredict::calcPhenotype(
       trainingExprData = training_data,
       trainingPtype = as.matrix(drug_data),
       testExprData = as.matrix(test.data),
-      batchCorrect = "none",
+      batchCorrect = "eb",
       powerTransformPhenotype = T,
       removeLowVaryingGenes = 0.2,
       minNumSamples = 10,
