@@ -68,7 +68,7 @@ genelist
 # [40] "HEY2"   "HEY1"   "HDAC11"
 
 ## feature select by DEG, cox, and ML filtering
-selected.feature<-feature_selection(InputMatrix,
+selected.feature<-feature_selection(train_data,
                                     genelist=genelist,
                                     outdir="test/feature_selection/")
 head(selected.feature[1:5,]) # view selected feature
