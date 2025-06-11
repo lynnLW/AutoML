@@ -30,7 +30,7 @@ You may install this package with:
 # options(BioC_mirror="http://mirrors.tuna.tsinghua.edu.cn/bioconductor/")
 if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
 
-list.of.packages <- c("devtools", "dplyr", "stringr", "survival", "survminer", "survcomp", "aplot", "ggplot2", "ggpubr", "caret", "survivalROC", "e1071", "GSVA", "glmnet",  "msigdbr", "randomForestSRC", "plsRcox", "superpc", "gbm", "CoxBoost", "xgboost", "mboost")
+list.of.packages <- c("devtools", "dplyr", "stringr", "survival", "survminer", "survcomp", "aplot", "ggplot2", "ggpubr", "caret", "survivalROC", "e1071", "GSVA", "glmnet",  "msigdbr", "randomForestSRC", "plsRcox", "superpc", "gbm", "CoxBoost", "xgboost", "mboost","oncoPredict")
 #checking missing packages from the list
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 packToInst <- setdiff(list.of.packages, installed.packages())
