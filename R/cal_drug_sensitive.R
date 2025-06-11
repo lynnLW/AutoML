@@ -42,9 +42,9 @@ cal_drug_sensitive <- function(test.data,
 
   # loading
   data_files <- c(
-    system.file("extdata", "internal_drug_data.rdata", package = "AutoML"),
-    system.file("extdata", "internal_new_drug_data.rdata", package = "AutoML"),
-    system.file("extdata", "internal_expr_data.rdata", package = "AutoML")
+    system.file("extdata", "internal_drug_data.rda", package = "AutoML"),
+    system.file("extdata", "internal_new_drug_data.rda", package = "AutoML"),
+    system.file("extdata", "internal_expr_data.rda", package = "AutoML")
   )
 
   if (!all(file.exists(data_files))) {
