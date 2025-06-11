@@ -5,7 +5,7 @@
 #' @param newdata Dataframe containing 'time' and 'status' columns
 #' @param model Trained survival model object
 #' @param model_name Model type from supported list:
-#'        "Lasso", "Ridge", "Enet", "RFRSF", "GBM", "CoxBoost", "plsRcox",
+#'        "Lasso", "Ridge", "Enet", "RFSRC", "GBM", "CoxBoost", "plsRcox",
 #'        "XGBoost", "BlackBoost", "DeepHit", "DeepSurv", "SurvivalSVM"
 #' @return survcomp::concordance.index object containing:
 #'         - c.index: concordance index value

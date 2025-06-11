@@ -19,7 +19,7 @@ cal_multi_auc <- function(newdata, model, model_name, cuts = NULL, unit = "m") {
   }
 
   ## Validate model name
-  valid_models <- c("Lasso", "Ridge", "Enet", "RFRSF", "GBM", "CoxBoost",
+  valid_models <- c("Lasso", "Ridge", "Enet", "RFSRC", "GBM", "CoxBoost",
                     "plsRcox", "XGBoost", "BlackBoost", "DeepHit",
                     "DeepSurv", "SurvivalSVM","GLMBoost","SuperPC")
   model_name <- match.arg(model_name, valid_models)

@@ -5,7 +5,7 @@
 #' @param newdata Dataframe containing time-to-event data with 'time' and 'status' columns
 #' @param model Trained survival analysis model object
 #' @param model_name Model specification. Supported models:
-#'   "Lasso", "Ridge", "Enet", "RFRSF", "GBM", "CoxBoost", "plsRcox",
+#'   "Lasso", "Ridge", "Enet", "RFSRC", "GBM", "CoxBoost", "plsRcox",
 #'   "XGBoost", "BlackBoost", "DeepHit", "DeepSurv", "SurvivalSVM"
 #' @importFrom stats predict
 #' @importFrom survival Surv
@@ -17,7 +17,7 @@ cal_pred<-function(newdata,model,model_name){
     stop("Input data must contain 'time' and 'status' columns")
   }
 
-  valid_models <- c("Lasso", "Ridge", "Enet", "RFRSF", "GBM", "CoxBoost",
+  valid_models <- c("Lasso", "Ridge", "Enet", "RFSRC", "GBM", "CoxBoost",
                     "plsRcox", "XGBoost", "BlackBoost", "DeepHit",
                     "DeepSurv", "SurvivalSVM","GLMBoost","SuperPC")
   model_name <- match.arg(model_name, choices = valid_models)
@@ -39,7 +39,7 @@ cal_pred<-function(newdata,model,model_name){
     pred_coxb =as.numeric(predict(model,type='link',
                                   newx=as.matrix(newdata[,3:ncol(newdata)]),
                                   s = model$lambda))
-  } else if (model_name %in% c("RFRSF","SurvivalSVM")){
+  } else if (model_name %in% c("RFSRC","SurvivalSVM")){
     pred_coxb=as.numeric(predict(model,newdata)$predicted)
 
   } else if (model_name %in% c("GBM")){

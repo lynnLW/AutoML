@@ -136,7 +136,7 @@ ML.survival.model = function(train_data,
 
   ## the supporting function--------------------------------------------------
 
-  rfrsf_model<-function(d.train,d.test,fold,rep,outdir,seed,ncore){
+  rfsrc_model<-function(d.train,d.test,fold,rep,outdir,seed,ncore){
 
     # Record start time
     t1<-Sys.time()
@@ -161,7 +161,7 @@ ML.survival.model = function(train_data,
     folds_list <- create_folds(d.train, fold = fold, nrepeats = rep, strata = "status", seed = seed)
 
     # the supporting function-----------------------------
-    rfrsf_cox<-function(train_fold,valid_fold,test_fold,params,seed){
+    rfsrc_cox<-function(train_fold,valid_fold,test_fold,params,seed){
       ## modeling
       set.seed(seed)
       fit <-randomForestSRC::rfsrc(Surv(time, status) ~ .,
@@ -175,7 +175,7 @@ ML.survival.model = function(train_data,
                   forest = TRUE,
                   seed = seed)
 
-      model_name="RFRSF"
+      model_name="RFSRC"
       # saving result
       model <- list(
         best_param = list(params),
@@ -205,7 +205,7 @@ ML.survival.model = function(train_data,
             # Get train and valid datasets
             train_fold <- d.train[-folds[[k]], ]
             valid_fold <- d.train[folds[[k]], ]
-            model_list[[k]] <- rfrsf_cox(train_fold, valid_fold, d.test, params, seed)
+            model_list[[k]] <- rfsrc_cox(train_fold, valid_fold, d.test, params, seed)
 
           }
 
@@ -251,16 +251,16 @@ ML.survival.model = function(train_data,
       train_fold <- d.train[train_index, ]
       valid_fold <- d.train[test_index, ]
 
-      model_list[[j]]<-rfrsf_cox(train_fold,valid_fold,d.test,best_params,seed)
+      model_list[[j]]<-rfsrc_cox(train_fold,valid_fold,d.test,best_params,seed)
     }
 
     ###total data model
-    final_model<-rfrsf_cox(d.train,d.test,NULL,best_params,seed)
+    final_model<-rfsrc_cox(d.train,d.test,NULL,best_params,seed)
     metrics_list<-extract_metrics(model_list)
 
-    save("model_list", file = paste0(outdir,"/",sprintf("%d_%d_RFRSF_result.RData",rep,fold)))
-    save("final_model", file = paste0(outdir,"/",sprintf("%d_%d_final_RFRSF_result.RData",rep,fold)))
-    save("metrics_list", file = paste0(outdir,"/",sprintf("%d_%d_RFRSF_cindex_result.RData",rep,fold)))
+    save("model_list", file = paste0(outdir,"/",sprintf("%d_%d_RFSRC_result.RData",rep,fold)))
+    save("final_model", file = paste0(outdir,"/",sprintf("%d_%d_final_RFSRC_result.RData",rep,fold)))
+    save("metrics_list", file = paste0(outdir,"/",sprintf("%d_%d_RFSRC_cindex_result.RData",rep,fold)))
 
     # record time
     t2 <- Sys.time()
@@ -1738,8 +1738,8 @@ ML.survival.model = function(train_data,
   # 1.RSF --------
   message("---1 RSF ---")
   set.seed(seed)
-  model.list[[1]]<-rfrsf_model(d.train,d.test,fold=fold,rep=rep,outdir,seed=seed,ncore)
-  names(model.list)[[1]]<-"RFRSF"
+  model.list[[1]]<-rfsrc_model(d.train,d.test,fold=fold,rep=rep,outdir,seed=seed,ncore)
+  names(model.list)[[1]]<-"RFSRC"
 
   # 2.lasso -------
   message("---2 lasso ---")

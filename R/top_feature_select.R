@@ -119,7 +119,7 @@ top_feature_select <- function(
         alpha = 0.8
       ) +
       ggplot2::labs(
-        title = paste("Top", top, "Frequent Features"),
+        title = paste("Top", top, "Features"),
         x = "",
         y = "Frequency"
       ) +
@@ -134,17 +134,14 @@ top_feature_select <- function(
       ) +
       ggplot2::coord_flip()
 
-    print(p)
+    #print(p)
 
     # saving plots
-    ggplot2::ggsave(
-      filename = file.path(outdir, "top_feature_selection.jpg"),
-      plot = p,
-      width = width,
-      height = height,
-      dpi = 600,
-      units = "cm"
-    )
+    ggpubr::ggexport(p,
+                    filename = file.path(outdir, "top_feature_selection.jpg"),
+                    width = width*300,
+                    height = height*300,
+                    res = 600)
   }
 
   ## UpSet Plot ---------------------------

@@ -21,7 +21,7 @@
 #' @importFrom ggplot2 labs ggsave coord_flip scale_y_continuous
 #' @importFrom utils write.csv
 #' @importFrom stats reorder
-generat_rfrsf_importance <- function(fit,
+generat_rf_importance <- function(fit,
                                      prefix,
                                      outdir,
                                      top_n = NULL,

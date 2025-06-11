@@ -6,7 +6,7 @@
 #' @param newdata Dataframe containing 'time' and 'status' columns
 #' @param model Trained survival model object
 #' @param model_name Model type from supported list:
-#'        "Lasso", "Ridge", "Enet", "RFRSF", "GBM", "CoxBoost", "plsRcox",
+#'        "Lasso", "Ridge", "Enet", "RFSRC", "GBM", "CoxBoost", "plsRcox",
 #'        "XGBoost", "BlackBoost", "DeepHit", "DeepSurv", "SurvivalSVM"
 #' @return List containing:
 #'         - pred_df: Full prediction dataframe
