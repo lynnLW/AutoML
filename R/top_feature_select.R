@@ -98,7 +98,7 @@ top_feature_select <- function(
   }
 
   # Helper 2: Frequency Plot ----------------------------------------------------
-  plot_frequency <- function(freq_data, top, outdir, width, height) {
+  plot_frequency <- function(freq_data, top, outdir, width, height){
     top <- min(top, nrow(freq_data))
     plot_data <- utils::head(freq_data, top)
 

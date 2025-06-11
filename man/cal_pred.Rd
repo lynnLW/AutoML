@@ -12,7 +12,7 @@ cal_pred(newdata, model, model_name)
 \item{model}{Trained survival analysis model object}
 
 \item{model_name}{Model specification. Supported models:
-"Lasso", "Ridge", "Enet", "RFRSF", "GBM", "CoxBoost", "plsRcox",
+"Lasso", "Ridge", "Enet", "RFSRC", "GBM", "CoxBoost", "plsRcox",
 "XGBoost", "BlackBoost", "DeepHit", "DeepSurv", "SurvivalSVM"}
 }
 \value{

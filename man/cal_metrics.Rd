@@ -12,7 +12,7 @@ cal_metrics(newdata, model, model_name)
 \item{model}{Trained survival model object}
 
 \item{model_name}{Model type from supported list:
-"Lasso", "Ridge", "Enet", "RFRSF", "GBM", "CoxBoost", "plsRcox",
+"Lasso", "Ridge", "Enet", "RFSRC", "GBM", "CoxBoost", "plsRcox",
 "XGBoost", "BlackBoost", "DeepHit", "DeepSurv", "SurvivalSVM"}
 }
 \value{
