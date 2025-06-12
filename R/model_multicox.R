@@ -16,13 +16,13 @@
 #' @importFrom stats quantile median
 #' @export
 #'
-generate_multicox_analysis <- function(data, features, gene, dataset_name, outdir,
+generate_multicox_analysis <- function(data, features, gene, dataset_name,outdir="./",
                                   cut_type = NULL, plot_height = NULL,plot_width=NULL) {
   # log
   log_file <- file.path(outdir, "analysis_errors.log")
   if (!file.exists(log_file)) file.create(log_file)
 
-  if (!dir.exists(outdir)) dir.create(outdir)
+  if (!dir.exists(outdir)) dir.create(outdir,recursive = T)
 
   # main function ------------------------------------------------------------
 

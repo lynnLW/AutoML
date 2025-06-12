@@ -97,8 +97,8 @@ generate_two_boxplot<-function(expr_matrix, ### expr dataframe col features rows
         )
       p<-p+stat_compare_means(comparisons = pairwise_comparisons,size = 3,method=method)
       p
-      ggsave(p,filename=paste0(outdir,"/",gene,"_",dataset_name,".jpg"),width = width,height = height,
-             units ="cm",dpi=600)
+      ggpubr::ggexport(p,filename=paste0(outdir,"/",gene,"_",dataset_name,".jpg"),width = width*250,height = height*250,
+             res=600)
     }
 
   } else {
@@ -141,8 +141,8 @@ generate_two_boxplot<-function(expr_matrix, ### expr dataframe col features rows
           )
         p<-p+stat_compare_means(comparisons = pairwise_comparisons,size = 3,method=method)
         p
-        ggsave(p,filename=paste0(outdir,"/",gene,"_",dataset_name,".jpg"),width = width,height = height,
-               units ="cm",dpi=600)
+        ggpubr::ggexport(p,filename=paste0(outdir,"/",gene,"_",dataset_name,".jpg"),
+          width = width*250,height = height*250,res=600)
     }
     }
 

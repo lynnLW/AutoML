@@ -89,12 +89,12 @@ generat_rf_importance <- function(fit,
 
   # Print and save plot
   print(p)
-  ggplot2::ggsave(
+  ggpubr::ggexport(
     file.path(outdir, paste0(prefix, "_importance_plot.jpg")),
     plot = p,
-    width = width,
-    height = height,
-    dpi = 600
+    width = width*250,
+    height = height*250,
+    res=600
   )
 
   # Save sorted results

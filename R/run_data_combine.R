@@ -78,7 +78,7 @@ run_data_combine<-function(list_data_surv,
                legend.title="Cohort",
                ellipse.level=0.95)
   ##saving result
-  ggplot2::ggsave(filename =paste0(outdir,"/pca/pre_pca.jpg"),width = 4,height = 4,dpi=600)
+  ggpubr::ggexport(filename =paste0(outdir,"/pca/pre_pca.jpg"),width = 1200,height = 1200,res=600)
 
   if(correct_method=="sva"){
     print("Performing the combat process")
@@ -91,8 +91,8 @@ run_data_combine<-function(list_data_surv,
                  addEllipses = TRUE,
                  ellipse.level=0.95,
                  legend.title="Batch")
-    ggplot2::ggsave(filename =paste0(outdir,"/pca/post_pca_sva.jpg"),
-           width = 4,height = 4,dpi=600)
+    ggpubr::ggexport(filename =paste0(outdir,"/pca/post_pca_sva.jpg"),
+           width = 1200,height = 1200,res=600)
 
     ##sperate the dataset
     datasets<-unique(meta_info$batch)
@@ -127,7 +127,7 @@ run_data_combine<-function(list_data_surv,
                  legend.title="Batch",
                  ellipse.level=0.95)
     ##saving result
-    ggplot2::ggsave(filename =paste0(outdir,"/pca/post_pca_scale.jpg"),width = 4,height = 4,dpi=600)
+    ggpubr::ggexport(filename =paste0(outdir,"/pca/post_pca_scale.jpg"),width = 1200,height = 1200,res=600)
   } else if (correct_method=="min_max"){
     print("Performing the min-max scale process")
     min_max_scale<- function(x) {
@@ -157,7 +157,7 @@ run_data_combine<-function(list_data_surv,
                  legend.title="Batch",
                  ellipse.level=0.95)
     ##saving result
-    ggplot2::ggsave(filename =paste0(outdir,"/pca/post_pca_min_max.jpg"),width = 4,height = 4,dpi=600)
+    ggpubr::ggexport(filename =paste0(outdir,"/pca/post_pca_min_max.jpg"),width = 1200,height = 1200,res=600)
 
   } else if (correct_method=="none") {
     print("Not performing the correct process")

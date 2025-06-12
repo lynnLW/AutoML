@@ -183,14 +183,13 @@ analyze_drug_correlations <- function(data,
     file_path <- file.path(outdir, paste0("top_cor_combined.jpg"))
 
     # Save plot with dynamic dimensions
-    ggplot2::ggsave(
+    ggpubr::export(
       filename = file_path,
       plot = combined_plot,
       width = 12 * min(ncol, 2),  # Adjust width based on number of columns
       height = plot_height,
       device = "jpg",
-      units = "cm",
-      dpi = 600
+      res = 600
     )
   }
 

@@ -1010,7 +1010,7 @@ feature_selection<- function(InputMatrix,
                         xtics_angle = 90)
 
           print(p)
-          ggsave(p,filename = paste0(outdir,"/2.boruta_feature_importance.jpg"),dpi=600,units="cm",width=10,height =8,scale = 1.5)
+          ggpubr::ggexport(p,filename = paste0(outdir,"/2.boruta_feature_importance.jpg"),res=600,width=2400,height =2400,scale = 1.5)
           utils::write.table(boruta$finalDecision,file=paste0(outdir,"/2.boruta_finalDecision_feature.csv"),sep=",")
           result<-as.data.frame(boruta$finalDecision)
           result<-data.frame(gene=row.names(result),decision=result[,1])

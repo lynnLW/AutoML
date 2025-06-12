@@ -37,7 +37,7 @@ geneset_diff_cal <- function(gs.exp,
 
   ## Create output directory if it doesn't exist
   if(!dir.exists(outdir)){
-    dir.create(outdir)
+    dir.create(outdir,recursive=T)
   }
 
   ## Format input data

@@ -261,13 +261,12 @@ cindex_rank <- function(vali_auc_list,
       aplot::insert_right(p4, width = 0.25)
 
     # Save plot
-    ggplot2::ggsave(
+    ggpubr::ggexport(
       filename = file.path(outdir, paste0("all_", index_label, "_heatmap.jpg")),
       plot = p,
       width = 4400,
       height = 4800,
-      units = "px",
-      dpi = 600
+      res = 600
     )
     return(p)
   }
@@ -371,13 +370,12 @@ cindex_rank <- function(vali_auc_list,
         )
 
       # Save plot
-      ggplot2::ggsave(
+      ggpubr::ggexport(
         plot = p,
         filename = file.path(outdir, paste0(model, ".", index, ".forestplot.jpg")),
-        width = 9,
-        height = 9,
-        units = "cm",
-        dpi = 600
+        width = 1700,
+        height = 1700,
+        res = 600
       )
 
     }
@@ -411,7 +409,8 @@ cindex_rank <- function(vali_auc_list,
                axis.text.x = element_text(angle = 45, hjust = 1,color="black",size=10),
                plot.title = element_text(hjust = 0.5, face = "bold", size = 12))
       print(p)
-      ggsave(p,filename=paste0(outdir,"/",model,".",index,".horiz.forestplot.jpg"),width = 9,height = 9,units = "cm",dpi=600)
+      ggpubr::ggexport(p,filename=paste0(outdir,"/",model,".",index,".horiz.forestplot.jpg"),
+             width = 1700,height = 1700,res=600)
 
     }
 

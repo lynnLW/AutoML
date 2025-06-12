@@ -114,13 +114,12 @@ cal_diff <- function(expr_matrix,
   print(p)
   file_path <- file.path(outdir, paste0("top_diff_combined.jpg"))
   # Save plot
-  ggplot2::ggsave(
+  ggpubr::ggexport(
     filename = file_path,
-    width = width,
-    height = height,
+    width = width*300,
+    height = height*300,
     device = "jpg",
-    units="cm",
-    dpi=600
+    res=600
   )
 }
 
