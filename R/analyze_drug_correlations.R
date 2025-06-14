@@ -186,9 +186,8 @@ analyze_drug_correlations <- function(data,
     ggpubr::ggexport(
       filename = file_path,
       plot = combined_plot,
-      width = 12 * min(ncol, 2),  # Adjust width based on number of columns
-      height = plot_height,
-      device = "jpg",
+      width = 12 * min(ncol, 2)*250,  # Adjust width based on number of columns
+      height = plot_height*250,
       res = 600
     )
   }

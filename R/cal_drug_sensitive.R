@@ -64,9 +64,9 @@ cal_drug_sensitive <- function(test.data,
   training_data <- switch(database,
                           "CTRP2" = {
                             if (TPM) {
-                              internal_drug_data$training_data$CTRP2_TPM_Expr
+                              internal_expr_data$CTRP2_TPM_Expr
                             } else {
-                              internal_drug_data$training_data$CTRP2_RPKM_Expr
+                              internal_expr_data$CTRP2_RPKM_Expr
                             }
                           },
                           "GDSC1" = internal_expr_data$GDSC1_Expr,

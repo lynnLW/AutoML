@@ -10,7 +10,7 @@
 #' @param unicox_km unicox and km filtering
 #' @param deg differential expression filtering
 #' @param up when up=T, HR>1 in unicox analysis and log2FC>0 in differential analysis
-#' @param method  "all" using 9 ML algorithms or boruta or xgboost or RSF or rfe or lasso
+#' @param method  "all" using 9 ML algorithms or boruta or xgboost or rfsrc or rfe or lasso
 #' @param svm_method when method="all", setting if using svm algorithms, which is time-consuming
 #' @param outdir the outpt directory
 #' @param seed  The seed
@@ -221,7 +221,7 @@ feature_selection<- function(InputMatrix,
                          KM_pcutoff=0.05,
                          outdir
     ) {
-    
+
       ############### km selection#######
       print("Stating the KM survival")
 
@@ -627,11 +627,11 @@ feature_selection<- function(InputMatrix,
   }
 
   ##6.RSF
-  FS.rsf<-function(est_dd,
+  FS.SRC<-function(est_dd,
                    outdir,
                    seed=seed){
     ##### 6.RSF ###########
-    message("--- 6.RSF  ---")
+    message("--- 6.RFSRC  ---")
     set.seed(seed)
     ns_res<-randomForestSRC::tune.nodesize(Surv(OS_time, OS_status) ~ ., est_dd)
     ###
@@ -651,12 +651,12 @@ feature_selection<- function(InputMatrix,
     rid <- rid$topvars
 
     result <- data.frame(
-      method = c(rep("RSF", length(rid))),
+      method = c(rep("RFSRC", length(rid))),
       selected.fea = rid
     )
 
     selected.feature <- rbind(selected.feature, result)
-    utils::write.table(result,file=paste0(outdir,"/6.RSF_select_features.csv"),sep=",",row.names = F)
+    utils::write.table(result,file=paste0(outdir,"/6.RFSRC_select_features.csv"),sep=",",row.names = F)
     return(selected.feature)
   }
 
@@ -943,8 +943,8 @@ feature_selection<- function(InputMatrix,
         selected.feature<-FS.coxboost(est_dd,selected.feature,fold,outdir,seed=seed)
 
         ### 6.rsf ##########
-        message("--- 6.RSF  ---")
-        selected.feature<-FS.rsf(est_dd,outdir,seed=seed)
+        message("--- 6.RFSRC  ---")
+        selected.feature<-FS.SRC(est_dd,outdir,seed=seed)
 
         ##### 7.RFE ##########
         message("--- 7.RFE  ---")
@@ -1020,9 +1020,9 @@ feature_selection<- function(InputMatrix,
 
         selected.feature<-boruta_feature_select(est_dd,selected.feature,
                                                 outdir,seed=seed)
-      } else if (method == "RSF"){
-        message("--- RSF  ---")
-        selected.feature<-FS.rsf(est_dd,outdir,seed=seed)
+      } else if (method == "rfsrc"){
+        message("--- RFSRC  ---")
+        selected.feature<-FS.SRC(est_dd,outdir,seed=seed)
       } else if (method =="xgboost"){
         message("--- xgboost  ---")
         selected.feature<-FS.xgboost(est_dd,selected.feature,outdir,seed=seed)

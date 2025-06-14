@@ -9,6 +9,7 @@
 #' @param dataset Character vector of dataset names
 #' @param index Metrics to compare ("cindex", "AUC_1", "AUC_3")
 #' @import ggplot2
+#' @importFrom aplot plot_list
 #' @return ggplot2 object showing performance comparison
 #' @export
 #'
@@ -19,6 +20,8 @@ index_comp <- function(own_auc_list,
                      dataset, # input datasets name
                      index #Cindex, AUC_1,3,5,7
 ) {
+
+  library(ggplot2)
 
   if (is.null(dataset_col) == T) {
     dataset_col <- c(
@@ -93,11 +96,11 @@ index_comp <- function(own_auc_list,
   }
   ###
   generate_p<-function(index_df_select,index){
-    ggplot(index_df_select, aes(x =.data$Signature, y = .data[[index]])) +
-      geom_segment(aes(x = .data$Signature, xend = .data$Signature, y = 0, yend = .data[[index]], color = .data$ID)) +
-      geom_point(aes(color = .data$ID)) +
-      scale_color_manual(values = dataset_col[t], name = "Cohort") +
-      theme(
+    ggplot2::ggplot(index_df_select, aes(x =.data$Signature, y = .data[[index]])) +
+      ggplot2::geom_segment(aes(x = .data$Signature, xend = .data$Signature, y = 0, yend = .data[[index]], color = .data$ID)) +
+      ggplot2::geom_point(aes(color = .data$ID)) +
+      ggplot2::scale_color_manual(values = dataset_col[t], name = "Cohort") +
+      ggplot2::theme(
         panel.grid = element_blank(),
         axis.text.y.left = (element_text(color = index_df_select$text,size = 8)),
         panel.border = element_rect(colour = "black", fill = NA, size = 0.3),
@@ -107,8 +110,8 @@ index_comp <- function(own_auc_list,
         panel.background = element_rect(fill = "white")
       ) +
       # scale_y_continuous(position = "right")+
-      labs(y = index, x = "", title = "") +
-      coord_flip()
+      ggplot2::labs(y = index, x = "", title = "") +
+      ggplot2::coord_flip()
   }
 
   index_df<-index_df[index_df$Model==model_name,]

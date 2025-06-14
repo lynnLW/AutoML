@@ -15,7 +15,7 @@
 #' @importFrom ggplot2 ggplot aes geom_boxplot geom_violin scale_fill_manual
 #' @importFrom ggplot2 facet_wrap theme_bw labs theme element_text element_blank
 #' @importFrom ggplot2 ggsave after_stat
-#' @importFrom ggpubr stat_compare_means
+#' @importFrom ggpubr stat_compare_means ggexport
 #' @importFrom ggsci scale_fill_d3
 #' @importFrom utils head
 #' @export
@@ -111,15 +111,17 @@ cal_diff <- function(expr_matrix,
       axis.title = element_text(colour = "black", size = 10),
       title = element_text(colour = "black", size = 10)
     )
+
   print(p)
+
   file_path <- file.path(outdir, paste0("top_diff_combined.jpg"))
+
   # Save plot
   ggpubr::ggexport(
     filename = file_path,
+    plot = p,
     width = width*300,
     height = height*300,
-    device = "jpg",
-    res=600
-  )
+    res=600)
 }
 
