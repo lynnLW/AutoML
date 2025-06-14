@@ -82,7 +82,8 @@ head(selected.feature[1:5,]) # view selected feature
 ### Identified prognostic genes selected by at least 7 ML algorithms
 
 ```{r}
-## load("inst/extdata/5_selected_feature.Rdata") example result from feature selection function
+#example result from feature selection function
+## selected.feature<-get(load(system.file("extdata", "5_selected_feature.rda", package = "AutoML"))) 
 f<-top_feature_select(selected.feature = selected.feature,
                         nmethod = 7,
                         width=7.5,
@@ -98,7 +99,7 @@ f<-top_feature_select(selected.feature = selected.feature,
 ```{r}
 candidate_genes<-f # The final selected genes
 # modeling
-model.list<-ML.survival.model(train_data,# The training data
+model_list<-ML.survival.model(train_data,# The training data
                                 candidate_genes,
                                 filter_OS_time=F,
                                 meta_time="m",
@@ -117,7 +118,8 @@ model.list<-ML.survival.model(train_data,# The training data
 ### Model performance evaluation in the training data
 
 ``` r
-# load("inst/extdata/10_5_model_list.RData") # result from ML.survival.model
+# example result from ML.survival.model 
+# model_list<-get(load(system.file("extdata", "10_5_model_list.rda", package = "AutoML")))
 # extract cindex list
 cindex_list<-lapply(model_list,function(x)x$metrics_list)
 # Show C-index of each ML algorithm
@@ -140,12 +142,13 @@ cindex_rank2(model_list=model.list,outdir="test/evaluation/")
 ### Model performance evaluation in the external cohort 
 
 ```{r}
-# loading external validation cohort
-# load("inst/extdata/train_features.Rdata") # The final selected genes
+# loading final candidate genes
+candidate_genes<-f 
 print(candidate_genes)
 #[1] "AXIN1" "JAG1"  "KAT2A" "NCSTN"
 
-# load("inst/extdata/list_train_vali_Data") # The validation cohort list
+# loading external validation cohort
+list_train_vali_Data<-get(load(system.file("extdata", "list_train_vali_Data", package = "AutoML"))) # The validation cohort list
 # calculate c-index and time-dependent AUC values
 model_auc_list<-cal_vali_index(list_train_vali_Data,candidate_genes,model.list,rep=1,outdir="test/validation/")
 ```
@@ -153,7 +156,7 @@ model_auc_list<-cal_vali_index(list_train_vali_Data,candidate_genes,model.list,r
 ### Plot C-index in all cohorts
 
 ```{r}
-# load("inst/extdata/test_index.Rdata") example result from cal_vali_index
+# model_auc_list<-get(load(system.file("extdata", "test_index.rda", package = "AutoML"))) example result from cal_vali_index
 cindex_rank(vali_auc_list = model_auc_list,index="cindex",train="Train",plot_type="barplot",outdir="test/validation/")
 cindex_rank(vali_auc_list = model_auc_list,index="km_auc_1",train="Train",plot_type="barplot",outdir="test/validation/")
 cindex_rank(vali_auc_list = model_auc_list,index="km_auc_2",train="Train",plot_type="barplot",outdir="test/validation/")
@@ -178,8 +181,8 @@ surv_plot(vali_auc_list = model_auc_list,model="all",outdir="test/validation/")
 
 ### Multicox analysis in all cohorts
 ```{r}
-# loading meta information of each cohort")
-load("inst/extdata/list_train_vali_meta")
+# loading meta information of each cohort
+list_train_vali_meta<-get(load(system.file("extdata", "list_train_vali_meta", package = "AutoML"))) # The validation cohort list
 
 # Extract the risk score of the best model
 model_name='GBM'
@@ -213,11 +216,15 @@ for(i in 1:length(rs_list)){
 
 ### Comparison with published signatures
 ```{r}
-#load("inst/extdata/test_index.Rdata")
+# own signature
+# model_auc_list<-get(load(system.file("extdata", "test_index.rda", package = "AutoML"))) 
+own_auc_list<-list()
+published_auc_list<-list()
 own_auc_list[['Own']]<-model_auc_list
-#load("inst/extdata/published_auc_list.rdata") #published signatures modeling using ML.survival.model and cal_vali_index function
-published_auc_list[['Published']]<-model_auc_list
+# published signatures modeling using ML.survival.model and cal_vali_index function
+published_auc_list[['Published']]<-get(load(system.file("extdata", "published_auc_list.rda", package = "AutoML")))
 indices=c("Cindex","AUC_1","AUC_2","AUC_3","AUC_5","AUC_7","AUC_10")
+dir.create("test/comparison/GBM",recursive=T)
 for (index in indices){
   p<-index_comp(own_auc_list =own_auc_list,
                   published_auc_list=published_auc_list,
@@ -225,7 +232,7 @@ for (index in indices){
                   dataset=names(own_auc_list[[1]][[1]]),
                   index="Cindex")
   p
-  ggsave(p,file=paste0("test/comparison/GBM/",index,".jpg"),dpi=600,height =6,width =30,units="cm")
+  ggpubr::ggexport(p,filename=paste0("test/comparison/GBM/",index,".jpg"),res=600,height =1800,width =9000)
 }
 ```
 ![7](https://github.com/user-attachments/assets/f4adf37b-4cb6-4b2c-a794-a8bea33234ed)
@@ -233,8 +240,8 @@ for (index in indices){
 ### Functional enrichment
 
 ```{r}
-#load("inst/extdata/list_train_vali_Data") ## Full genes not only feature genes
-#Predictive metabolites, metabolic and cancer hallmark pathways, immune cells scores using ssgsea
+# list_train_vali_Data<-get(load(system.file("extdata", "list_train_vali_Data", package = "AutoML")))  ## Full genes not only feature genes
+# Predictive metabolites, metabolic and cancer hallmark pathways, immune cells scores using ssgsea
 library(dplyr)
 MPI_list<-list()
 Immune_list<-list()
@@ -243,16 +250,17 @@ metabolic_list<-list()
 for (i in 1:length(list_train_vali_Data)){
   expr<-list_train_vali_Data[[i]][,-c(1:3)] %>% t() %>% as.data.frame()
   dataset_name=names(list_train_vali_Data)[i]
-  gs<-geneset_cal(expr,category="H",output_dir = paste0("test/H/",dataset_name)) #hallmark
+  gs<-geneset_cal(expr,category="H",output_dir = paste0("test/function/H/",dataset_name)) #hallmark
   hallmark_list[[i]]<-gs
-  gs<-geneset_cal(expr,category="TILs",output_dir = paste0("test/Immune/TILs/",dataset_name)) # immune cell
+  gs<-geneset_cal(expr,category="TILs",output_dir = paste0("test/function/Immune/TILs/",dataset_name)) # immune cell
   Immune_list[[i]]<-gs
-  gs<-geneset_cal(expr,category="MPI",output_dir = paste0("test/MPI/",dataset_name)) #predictive metabolites
+  gs<-geneset_cal(expr,category="MPI",output_dir = paste0("test/function/MPI/",dataset_name)) #predictive metabolites
   MPI_list[[i]]<-gs
-  gs<-geneset_cal(expr,category="Metabolic",output_dir = paste0("test/Metabolic/",dataset_name)) #metabolic pathways
+  gs<-geneset_cal(expr,category="Metabolic",output_dir = paste0("test/function/Metabolic/",dataset_name)) #metabolic pathways
   metabolic_list[[i]]<-gs
 }
 names(metabolic_list)<-names(list_train_vali_Data)
+names(hallmark_list)<-names(list_train_vali_Data)
 names(Immune_list)<-names(list_train_vali_Data)
 names(MPI_list)<-names(list_train_vali_Data)
 
@@ -277,7 +285,7 @@ for (i in 1:length(auc_list)){
   rs_df$group<-ifelse(rs_df$pred>median(rs_df$pred),"High","Low")
   group_list[[dataset]]<-rs_df
 }
-save(group_list,file=paste0("test/grouping/group_list.rdata"))
+save(group_list,file=paste0("test/group_list.rdata"))
 ```
 
 #### Calculate the correlation between the risk score and functional pathways
@@ -298,7 +306,7 @@ for (i in 1:length(auc_list)){
     ncol = 2,
     outdir=paste0("test/function/immune/",dataset))
   # calculate differences
-  cal_diff( immune,rs_df$group,outdir=paste0("test/function/immune/",dataset)) 
+  cal_diff(immune,rs_df$group,outdir=paste0("test/function/immune/",dataset)) 
 }
 ```
 ![top_cor_combined](https://github.com/user-attachments/assets/244280ec-435c-442b-985e-05189416caa5)
@@ -314,8 +322,10 @@ library(limma)
 for (i in 1:length(list_train_vali_Data)){
   dataset_name=names(list_train_vali_Data)[i]
   expr<-list_train_vali_Data[[dataset_name]][,-c(1:3)] %>% t() %>% as.data.frame() # col: samples
-  expr<-normalizeQuantiles(expr) #normalized
-  cal_drug_sensitive(expr,database ="CTRP2",output_filename =paste0(dataset_name,"_drug_sensitivity"))
+  cal_drug_sensitive(expr,
+                    database ="CTRP2",
+                    output_dir="test/drug/",
+                    output_filename=paste0(dataset_name,"_drug_sensitivity"))
 }
 ```
 
@@ -323,13 +333,12 @@ for (i in 1:length(list_train_vali_Data)){
 
 ```{r}
 #load("inst/extdata/group_list.rdata")
-drug_file<-list.files("./calcPhenotype_Output/",pattern = "csv",full.names = T)
+drug_file<-list.files("test/drug/",pattern = "csv",full.names = T)
 for (i in 1:length(group_list)){
   dataset<-names(group_list)[i]
   file<-drug_file[grep(dataset,drug_file)]
   result<-read.csv(file,row.names = 1)
   head(result[1:5,1:5])
-  result<-scale(result) %>% as.data.frame()
   rs_df<-group_list[[dataset]]
   rs_df<-rs_df[row.names(result),]
   merge_df<-cbind(rs_df$pred,result)
@@ -345,7 +354,30 @@ for (i in 1:length(group_list)){
   # calculate differences
   cal_diff(result,rs_df$group,outdir=paste0("test/drug/",dataset))
 }
-
 ```
 ![top_cor_combined](https://github.com/user-attachments/assets/95198f12-90e3-416f-9e3e-48f337522a12)
 ![top_diff_combined](https://github.com/user-attachments/assets/3bfd1840-2816-49e2-ad2f-aec99171ff02)
+
+```{r}
+files<-list.files(paste0("test/drug/"),pattern="cor_results.csv",full.names = T,recursive = T)
+result<-data.frame()
+for (i in c(1:6)){
+  file=read.csv(files[i],row.names = 1)
+  dataset_name<-basename(dirname(files[i]))
+  file$dataset<-dataset_name
+  result<-rbind(result,file)
+}
+names(result)[1]<-"selected.fea"
+names(result)[6]<-"method"
+negative<-result[result$p.value<0.05&result$r<(-0.3),]
+positive<-result[result$p.value<0.05&result$r>0.3,]
+
+top_feature_select(selected.feature = positive,nmethod = 4,width = 12,height = 12,
+                   outdir =paste0("test/drug/CTRP2/up/"))
+top_feature_select(selected.feature = negative,nmethod = 4,width = 12,height = 12,
+                   outdir = paste0("test/drug/CTRP2/down/"))
+
+write.csv(result,file = paste0("test/drug/CTRP2/all_cor_results.csv"))
+}
+
+
