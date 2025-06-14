@@ -17,7 +17,7 @@ Lin Wang, PhD, [1155116558\@link.cuhk.edu.hk](1155116558@link.cuhk.edu.hk)
 
 Institute of Trauma and Metabolism, Zhengzhou Central Hospital Affiliated to Zhengzhou University, Zhengzhou 450007, China.
 
-Any technical question, please contact Lin Wang ([1155116558\@link.cuhk.edu.hk](1155116558@link.cuhk.edu.hk)).
+Any technical question, please get in touch with Lin Wang ([1155116558\@link.cuhk.edu.hk](1155116558@link.cuhk.edu.hk)).
 
 copyright, [LynnLab\@ZZU]
 
@@ -30,7 +30,7 @@ You may install this package with:
 # options(BioC_mirror="http://mirrors.tuna.tsinghua.edu.cn/bioconductor/")
 if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
 
-list.of.packages <- c("devtools", "dplyr", "stringr", "survival", "survminer", "survcomp", "aplot", "ggplot2", "ggpubr", "caret", "survivalROC", "e1071", "GSVA", "glmnet",  "msigdbr", "randomForestSRC", "plsRcox", "superpc", "gbm", "CoxBoost", "xgboost", "mboost","oncoPredict")
+list.of.packages <- c("devtools", "dplyr", "stringr", "survival", "survminer", "survcomp", "aplot", "ggplot2", "ggpubr", "caret", "survivalROC", "e1071", "GSVA", "glmnet",  "msigdbr", "randomForestSRC", "plsRcox", "superpc", "gbm", "CoxBoost", "xgboost", "mboost", "oncoPredict")
 #checking missing packages from the list
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 packToInst <- setdiff(list.of.packages, installed.packages())
@@ -91,7 +91,8 @@ f<-top_feature_select(selected.feature = selected.feature,
                         outdir="test/feature_selection/")
 # The final selected genes: 4 
 ```
-![1](https://github.com/user-attachments/assets/8603b5c5-1c36-44f4-b10b-e3f882b3945c)
+![图片1](https://github.com/user-attachments/assets/5d593849-b46b-44b0-975e-3b02fe7b7a51)
+
 
 
 ### Construction of ML-based prognosis models
@@ -125,8 +126,7 @@ cindex_list<-lapply(model_list,function(x)x$metrics_list)
 # Show C-index of each ML algorithm
 cindex_rank2(cindex_list,order="valid",index="all",outdir="test/evaluation/",plot_type="boxplot")
 ```
-
-![2](https://github.com/user-attachments/assets/2da7b68d-bc1e-4165-b4f2-331f88f43339)
+![图片2](https://github.com/user-attachments/assets/9b6cf7c5-ddfd-4a2e-8a13-31b2deff5097)
 
 
 ```{r}
@@ -135,9 +135,8 @@ model.list<-lapply(model_list,function(x)x$final_model)
 # Show C-index of all final ML models
 cindex_rank2(model_list=model.list,outdir="test/evaluation/")
 ```
-![image](https://github.com/user-attachments/assets/dc34422b-844c-41ee-a38e-385a18570812)
 
-
+![图片3](https://github.com/user-attachments/assets/cf2d9c53-a331-48e7-8762-30ce7a62446c)
 
 ### Model performance evaluation in the external cohort 
 
@@ -162,21 +161,22 @@ cindex_rank(vali_auc_list = model_auc_list,index="km_auc_1",train="Train",plot_t
 cindex_rank(vali_auc_list = model_auc_list,index="km_auc_2",train="Train",plot_type="barplot",outdir="test/validation/")
 cindex_rank(vali_auc_list = model_auc_list,index="km_auc_3",train="Train",plot_type="barplot",outdir="test/validation/")
 ```
-![3](https://github.com/user-attachments/assets/f66a09dd-9083-4cd2-b0a8-fbaf9b28a6ef)
+
+![图片4](https://github.com/user-attachments/assets/50d5875d-c4b1-4a27-a35b-9bfcb80c984d)
 
 
 ### Plot ROC curves in all cohorts
 ```{r}
 roc_plot(vali_auc_list = model_auc_list,model="all",outdir="test/validation/")
 ```
-![4](https://github.com/user-attachments/assets/ee170036-f123-4249-94e4-4ecaad3fa370)
 
+![图片6](https://github.com/user-attachments/assets/cf120e67-c33b-400b-bc99-5e0a4f3cc79f)
 
 ### Plot KM survival curves in all cohorts
 ```{r}
 surv_plot(vali_auc_list = model_auc_list,model="all",outdir="test/validation/")
 ```
-![5](https://github.com/user-attachments/assets/48005504-a230-4067-8182-d2436c04e44b)
+![图片5](https://github.com/user-attachments/assets/51886e4f-9da9-41b7-9ccb-6a4412b02b99)
 
 
 ### Multicox analysis in all cohorts
@@ -210,8 +210,8 @@ for(i in 1:length(rs_list)){
     )
 }
 ```
-![6](https://github.com/user-attachments/assets/7bb414ae-bcf3-4ab1-80e4-56e5e1e0a142)
 
+![图片9](https://github.com/user-attachments/assets/a6c2ecf8-4a63-473c-bfbe-94b0f2cb061c)
 
 
 ### Comparison with published signatures
@@ -235,7 +235,8 @@ for (index in indices){
   ggpubr::ggexport(p,filename=paste0("test/comparison/GBM/",index,".jpg"),res=600,height =1800,width =9000)
 }
 ```
-![7](https://github.com/user-attachments/assets/f4adf37b-4cb6-4b2c-a794-a8bea33234ed)
+![图片7](https://github.com/user-attachments/assets/7068733a-2230-49ec-8f49-61714b076f53)
+
 
 ### Functional enrichment
 
@@ -309,8 +310,7 @@ for (i in 1:length(auc_list)){
   cal_diff(immune,rs_df$group,outdir=paste0("test/function/immune/",dataset)) 
 }
 ```
-![top_cor_combined](https://github.com/user-attachments/assets/244280ec-435c-442b-985e-05189416caa5)
-![top_diff_combined](https://github.com/user-attachments/assets/7ee08dd1-58b7-414f-90ca-50a8a9b0476d)
+![图片8](https://github.com/user-attachments/assets/de0ec9f1-6a68-4fbd-a398-f2576288d02d)
 
 
 ### Calculate the drug sensitivity of each cohort
@@ -332,7 +332,7 @@ for (i in 1:length(list_train_vali_Data)){
 ### Drug sensitivity differences between high- and low-risk groups
 
 ```{r}
-#load("inst/extdata/group_list.rdata")
+# group_list<-get(load(system.file("extdata", "group_list.rda", package = "AutoML")))
 drug_file<-list.files("test/drug/",pattern = "csv",full.names = T)
 for (i in 1:length(group_list)){
   dataset<-names(group_list)[i]
@@ -355,8 +355,7 @@ for (i in 1:length(group_list)){
   cal_diff(result,rs_df$group,outdir=paste0("test/drug/",dataset))
 }
 ```
-![top_cor_combined](https://github.com/user-attachments/assets/95198f12-90e3-416f-9e3e-48f337522a12)
-![top_diff_combined](https://github.com/user-attachments/assets/3bfd1840-2816-49e2-ad2f-aec99171ff02)
+![图片10](https://github.com/user-attachments/assets/3a3aa274-538a-4e0c-a2b2-01457333f346)
 
 ```{r}
 files<-list.files(paste0("test/drug/"),pattern="cor_results.csv",full.names = T,recursive = T)
@@ -378,6 +377,8 @@ top_feature_select(selected.feature = negative,nmethod = 4,width = 12,height = 1
                    outdir = paste0("test/drug/CTRP2/down/"))
 
 write.csv(result,file = paste0("test/drug/CTRP2/all_cor_results.csv"))
-}
 
+```
+
+![图片11](https://github.com/user-attachments/assets/234b7475-1286-4ef0-9272-e9c43926925b)
 
