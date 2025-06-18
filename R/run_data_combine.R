@@ -17,7 +17,7 @@ run_data_combine<-function(list_data_surv,
       dir.create(outdir,recursive = T)
   }
 
-  if(!dir.exists(paste0(outdir,"/pca")){
+  if(!dir.exists(paste0(outdir,"/pca"))){
     dir.create(paste0(outdir,"/pca"),recursive = T)
   }
 
