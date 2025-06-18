@@ -16,6 +16,11 @@ run_data_combine<-function(list_data_surv,
   if(!dir.exists(outdir)){
       dir.create(outdir,recursive = T)
   }
+
+  if(!dir.exists(paste0(outdir,"/pca")){
+    dir.create(paste0(outdir,"/pca"),recursive = T)
+  }
+
   ##sets to combat
   if(is.null(sets)==T){
     sets=seq_along(list_data_surv)
@@ -77,6 +82,8 @@ run_data_combine<-function(list_data_surv,
                addEllipses = TRUE,
                legend.title="Cohort",
                ellipse.level=0.95)
+  ##
+
   ##saving result
   ggpubr::ggexport(filename =paste0(outdir,"/pca/pre_pca.jpg"),width = 1200,height = 1200,res=600)
 
